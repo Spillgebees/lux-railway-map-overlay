@@ -1,0 +1,25 @@
+[project]
+name = "lux-railway-map-overlay"
+version = "0.1.0"
+description = "Railway infrastructure vector tile generator for Luxembourg"
+requires-python = ">=3.13"
+dependencies = [
+    "shapely>=2.0,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "pre-commit",
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["scripts"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]
+
+[tool.black]
+target-version = ["py313"]

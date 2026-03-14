@@ -1,0 +1,6 @@
+apiVersion: v2
+name: lux-railway-map-overlay
+description: Helm chart for the Luxembourg Railway Infrastructure Vector Tile Overlay
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,26 @@
+@page "/"
+@inject IConfiguration Configuration
+
+<PageTitle>Railway Tile Viewer</PageTitle>
+
+<SgbMap MapOptions="@_mapOptions"        Height="100%" />
+
+@code {
+    private MapOptions _mapOptions = null!;
+
+    protected override void OnInitialized()
+    {
+        var tileServerUrl = Configuration.GetValue<string>("TileServerUrl")
+            ?? "http://localhost:3000";
+
+        _mapOptions = new MapOptions(
+            Center: new Coordinate(49.61, 6.13),
+            Zoom: 8,
+            Styles: [
+                MapStyle.OpenFreeMap.Positron,
+                MapStyle.FromUrl($"{tileServerUrl}/style.json").WithId("lux-railway-overlay")
+            ],
+            ComposedGlyphsUrl: $"{tileServerUrl}/fonts/{{fontstack}}/{{range}}.pbf"
+        );
+    }
+}

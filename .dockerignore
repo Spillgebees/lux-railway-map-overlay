@@ -1,0 +1,10 @@
+.git/
+.github/
+.venv/
+data/
+viewer/bin/
+viewer/obj/
+scripts/__pycache__/
+scripts/generator/__pycache__/
+**/__pycache__/
+**/*.pyc

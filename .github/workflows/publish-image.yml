@@ -1,0 +1,128 @@
+name: Publish Tile Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".dockerignore"
+      - ".github/workflows/publish-image.yml"
+      - "docker-compose.yml"
+      - "scripts/**"
+      - "styles/**"
+      - "tiles/**"
+  workflow_dispatch:
+    inputs:
+      fresh:
+        description: "Skip cache and download fresh data from Geofabrik and Overpass"
+        type: boolean
+        default: false
+  schedule:
+    # monthly rebuild (1st Sunday 03:23 UTC) to pick up OSM data updates
+    - cron: "23 3 1-7 * 0"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Generate, Build, and Publish
+    runs-on: ubuntu-latest
+    if: github.repository == 'Spillgebees/lux-railway-map-overlay'
+    env:
+      COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute cache key
+        if: ${{ !inputs.fresh }}
+        id: cache-key
+        run: |
+          echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore filtered source and Overpass cache
+        if: ${{ !inputs.fresh }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/cache/overpass/
+            data/intermediate/sources/
+          # auto-invalidates when:
+          # - month changes (monthly cron picks up fresh OSM data)
+          # - pipeline code changes (filter tags, Overpass query, config)
+          key: pipeline-${{ steps.cache-key.outputs.month }}-${{ hashFiles('scripts/generator/pipeline_sources.py', 'scripts/generator/pipeline.py', 'scripts/generator/config.py', 'scripts/generator/routes.py') }}
+          restore-keys: |
+            pipeline-${{ steps.cache-key.outputs.month }}-
+
+      - name: Build generator image
+        run: docker build -t lux-railway-generator:ci ./scripts
+
+      - name: Generate MBTiles
+        run: |
+          mkdir -p data
+          docker run --rm \
+            -v "$PWD/data:/data" \
+            lux-railway-generator:ci \
+            --countries lu,be,de,fr \
+            --output-dir /data
+
+      - name: Verify route layers were generated
+        run: |
+          python3 -c "
+          import json, sys
+          for path in sys.argv[1:]:
+              with open(path, encoding='utf-8') as f:
+                  data = json.load(f)
+              features = data.get('features', [])
+              if not features:
+                  print(f'FAIL: {path} has no features')
+                  sys.exit(1)
+              print(f'OK: {path} has {len(features)} feature(s)')
+          " data/intermediate/geojson/railway_routes.geojson \
+            data/intermediate/geojson/railway_routes_display.geojson
+
+      - name: Prepare production bundle
+        run: |
+          test -f data/out/lux-railway-map-overlay.mbtiles
+          mkdir -p bundle
+          cp data/out/lux-railway-map-overlay.mbtiles bundle/lux-railway-map-overlay.mbtiles
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tiles/Dockerfile.bundle
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Trigger Coolify deployment
+        if: env.COOLIFY_WEBHOOK != ''
+        run: |
+          response=$(curl -s -w "\n%{http_code}" "$COOLIFY_WEBHOOK")
+          http_code=$(echo "$response" | tail -1)
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Deployment trigger failed with HTTP $http_code"
+            exit 1
+          fi
+          echo "Deployment triggered successfully"

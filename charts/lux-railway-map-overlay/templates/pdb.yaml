@@ -1,0 +1,13 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "lux-railway-map-overlay.fullname" . }}
+  labels:
+    {{- include "lux-railway-map-overlay.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "lux-railway-map-overlay.selectorLabels" . | nindent 6 }}
+{{- end }}

@@ -1,0 +1,42 @@
+# Railway tile server (local development)
+#
+# Usage:
+#   1. Generate data:  docker compose --profile generate run --rm generate
+#   2. Start server:   docker compose up
+#   3. Browse:         http://localhost:3000/style.json (map style)
+#                      http://localhost:3000/catalog (tile catalog)
+#
+# To generate the default Luxembourg coverage set with cross-border context:
+#   docker compose --profile generate run --rm generate --countries lu,be,de,fr --output-dir /data
+
+services:
+  generate:
+    build:
+      context: ./scripts
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    volumes:
+      - ./data:/data
+    profiles:
+      - generate
+
+  tiles:
+    image: lux-railway-map-overlay:local
+    build:
+      context: .
+      dockerfile: tiles/Dockerfile
+    ports:
+      - "3000:8080"
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+    volumes:
+      - ./data:/data:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://127.0.0.1:8080/health 2>/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s

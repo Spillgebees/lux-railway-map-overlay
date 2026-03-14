@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>RailwayViewer</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishTrimmed>false</PublishTrimmed>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <BlazorMapProjectPath
+      Condition="'$(BlazorMapProjectPath)' == '' and '$(BLAZOR_MAP_PROJECT_PATH)' != ''"
+    >
+      $(BLAZOR_MAP_PROJECT_PATH)</BlazorMapProjectPath
+    >
+    <BlazorMapProjectPath
+      Condition="'$(BlazorMapProjectPath)' == '' and Exists('../../worktrees/Blazor.Map/feature/maptiler-pivot/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj')"
+    >
+      ../../worktrees/Blazor.Map/feature/maptiler-pivot/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj</BlazorMapProjectPath
+    >
+    <BlazorMapProjectPath
+      Condition="'$(BlazorMapProjectPath)' == '' and Exists('../../worktrees/Blazor.Map/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj')"
+    >
+      ../../worktrees/Blazor.Map/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj</BlazorMapProjectPath
+    >
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.5" />
+    <PackageReference
+      Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer"
+      Version="10.0.5"
+      PrivateAssets="all"
+    />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference
+      Include="$(BlazorMapProjectPath)"
+      Condition="'$(BlazorMapProjectPath)' != ''"
+    />
+  </ItemGroup>
+
+  <Target
+    Name="ValidateBlazorMapReference"
+    BeforeTargets="CollectPackageReferences;ResolveReferences"
+    Condition="'$(BlazorMapProjectPath)' == ''"
+  >
+    <Error Text="Spillgebees.Blazor.Map project not found. Set BLAZOR_MAP_PROJECT_PATH or pass /p:BlazorMapProjectPath=/absolute/path/to/Spillgebees.Blazor.Map.csproj before building the viewer." />
+  </Target>
+</Project>

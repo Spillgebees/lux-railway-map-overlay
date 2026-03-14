@@ -1,0 +1,27 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 26.3.1
+    hooks:
+      - id: black
+        files: ^(scripts|tests)/
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.11
+    hooks:
+      - id: actionlint-docker
+
+  - repo: local
+    hooks:
+      - id: dotnet-tool-restore
+        name: Restore .NET tools
+        entry: dotnet tool restore
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: csharpier
+        name: Run CSharpier
+        entry: dotnet tool run csharpier format
+        language: system
+        files: ^viewer/.*\.(cs|csproj|props|targets|xml)$
+        require_serial: true

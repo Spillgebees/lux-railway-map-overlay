@@ -1,0 +1,18 @@
+# Development container for the Blazor viewer.
+#
+# This image is intended for bind-mounted local development, not production.
+# Mount the repository at /workspace/lux-railway-map-overlay and either:
+# - mount a sibling Blazor.Map worktree at /workspace/worktrees/Blazor.Map, or
+# - set BLAZOR_MAP_PROJECT_PATH to the mounted Spillgebees.Blazor.Map.csproj path.
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+WORKDIR /workspace/lux-railway-map-overlay/viewer
+
+ENV ASPNETCORE_URLS=http://0.0.0.0:8080
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1
+ENV BLAZOR_MAP_PROJECT_PATH=/workspace/worktrees/Blazor.Map/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj
+
+EXPOSE 8080
+
+CMD ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:8080"]

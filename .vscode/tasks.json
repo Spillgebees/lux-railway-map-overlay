@@ -1,0 +1,75 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Generate Data",
+            "type": "shell",
+            "command": "docker",
+            "args": [
+                "compose",
+                "--profile",
+                "generate",
+                "run",
+                "--rm",
+                "generate"
+            ],
+            "options": {
+                "env": {
+                    "LOCAL_UID": "${input:localUid}",
+                    "LOCAL_GID": "${input:localGid}"
+                }
+            },
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Tile Server",
+            "type": "shell",
+            "command": "docker compose up",
+            "isBackground": true,
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Viewer",
+            "type": "shell",
+            "command": "dotnet run --project RailwayViewer.csproj",
+            "options": {
+                "cwd": "${workspaceFolder}/viewer",
+                "env": {
+                    "BLAZOR_MAP_PROJECT_PATH": "${input:blazorMapProjectPath}"
+                }
+            },
+            "isBackground": true,
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Validate Fast",
+            "type": "shell",
+            "command": "black --check scripts tests && pytest tests/generator && dotnet csharpier check viewer && actionlint",
+            "group": "test",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "localUid",
+            "type": "promptString",
+            "description": "Host UID for generated files",
+            "default": "1000"
+        },
+        {
+            "id": "localGid",
+            "type": "promptString",
+            "description": "Host GID for generated files",
+            "default": "1000"
+        },
+        {
+            "id": "blazorMapProjectPath",
+            "type": "promptString",
+            "description": "Optional absolute path to Spillgebees.Blazor.Map.csproj",
+            "default": ""
+        }
+    ]
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Tunnel icon: based on Maki by Mapbox (CC0 public domain), adapted for lux-railway-map-overlay -->
+<svg width="64" height="64" viewBox="0 0 15 15" xmlns="http://www.w3.org/2000/svg">
+  <!-- White halo (outer shell only) — adjust opacity to taste -->
+  <path
+    d="M4 2C2.34315 2 1 3.32706 1 4.96406V12.012C1 12.5576 1.44772 13 2 13H13C13.5523 13 14 12.5576 14 12.012V4.96406C14 3.32706 12.6569 2 11 2H4Z"
+    fill="white" stroke="white" stroke-width="1.2" stroke-linejoin="round" opacity="0.8" />
+  <!-- Outer portal -->
+  <path
+    d="M4 2C2.34315 2 1 3.32706 1 4.96406V12.012C1 12.5576 1.44772 13 2 13H3V8.55391C3 6.09839 5.01472 4.10781 7.5 4.10781C9.98528 4.10781 12 6.09842 12 8.55393V13H13C13.5523 13 14 12.5576 14 12.012V4.96406C14 3.32706 12.6569 2 11 2H4Z"
+    fill="#475569" />
+  <!-- Inner tunnel (dark) -->
+  <path
+    d="M7.5 4.60781C5.28472 4.60781 3.5 6.36839 3.5 8.80391V13L11.5 10V8.80393C11.5 6.36842 9.71528 4.60781 7.5 4.60781Z"
+    fill="#1e293b" />
+</svg>

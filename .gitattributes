@@ -1,0 +1,139 @@
+###############################################################################
+# Default: normalize line endings to LF in the repo, checkout as LF
+###############################################################################
+* text=auto eol=lf
+
+###############################################################################
+# Source code
+###############################################################################
+*.cs        text diff=csharp
+*.csx       text diff=csharp
+*.vb        text
+*.fs        text
+*.fsx       text
+*.ts        text
+*.tsx       text
+*.js        text
+*.jsx       text
+*.mjs       text
+*.cjs       text
+
+###############################################################################
+# .NET project / build files (MSBuild XML -- all handle LF fine)
+###############################################################################
+*.csproj    text
+*.vbproj    text
+*.fsproj    text
+*.dbproj    text
+*.proj      text
+*.projitems text
+*.props     text
+*.targets   text
+*.shproj    text
+*.slnx      text
+
+###############################################################################
+# Solution files
+#
+# Legacy .sln files MUST use CRLF. Visual Studio writes them with CRLF and
+# will rewrite the file on every save if forced to LF, causing constant
+# dirty diffs. This is the same approach used by dotnet/runtime and dotnet/sdk.
+###############################################################################
+*.sln       text eol=crlf
+
+###############################################################################
+# Configuration / data files
+###############################################################################
+*.json      text
+*.jsonc     text
+*.xml       text
+*.yml       text
+*.yaml      text
+*.toml      text
+*.config    text
+*.resx      text
+*.xlf       text linguist-generated=true
+*.md        text
+*.txt       text
+*.html      text
+*.htm       text
+*.css       text
+*.scss      text
+*.sql       text
+*.razor     text
+*.cshtml    text
+*.graphql   text
+*.env       text
+
+###############################################################################
+# Scripts
+#
+# Shell scripts must use LF even on Windows (WSL, Git Bash, CI).
+# Batch/cmd scripts must use CRLF to work on Windows.
+###############################################################################
+*.sh        text eol=lf
+*.bash      text eol=lf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+*.ps1       text
+
+###############################################################################
+# Lock files
+###############################################################################
+*.lock      text -diff
+bun.lock    text -diff
+
+###############################################################################
+# Graphics / images (binary)
+###############################################################################
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.bmp       binary
+*.webp      binary
+*.tif       binary
+*.tiff      binary
+*.svg       text
+
+###############################################################################
+# Fonts (binary)
+###############################################################################
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.eot       binary
+*.otf       binary
+
+###############################################################################
+# Archives & packages (binary)
+###############################################################################
+*.zip       binary
+*.gz        binary
+*.tar       binary
+*.7z        binary
+*.nupkg     binary
+*.snupkg    binary
+
+###############################################################################
+# Certificates & keys (binary)
+###############################################################################
+*.snk       binary
+*.pfx       binary
+
+###############################################################################
+# Compiled / native (binary)
+###############################################################################
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.so        binary
+*.dylib     binary
+
+###############################################################################
+# Documents (binary)
+###############################################################################
+*.pdf       binary diff=astextplain
+*.doc       binary diff=astextplain
+*.docx      binary diff=astextplain

@@ -1,0 +1,57 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "lux-railway-map-overlay.fullname" . }}
+  labels:
+    {{- include "lux-railway-map-overlay.labels" . | nindent 4 }}
+  {{- $hasAnnotations := or .Values.ingress.annotations .Values.ingress.certManager.enabled }}
+  {{- if $hasAnnotations }}
+  annotations:
+    {{- if and .Values.ingress.certManager.enabled .Values.ingress.certManager.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certManager.clusterIssuer | quote }}
+    {{- end }}
+    {{- if and .Values.ingress.certManager.enabled .Values.ingress.certManager.issuer }}
+    cert-manager.io/issuer: {{ .Values.ingress.certManager.issuer | quote }}
+    {{- end }}
+    {{- if and .Values.ingress.certManager.enabled .Values.ingress.certManager.issuerKind }}
+    cert-manager.io/issuer-kind: {{ .Values.ingress.certManager.issuerKind | quote }}
+    {{- end }}
+    {{- if and .Values.ingress.certManager.enabled .Values.ingress.certManager.issuerGroup }}
+    cert-manager.io/issuer-group: {{ .Values.ingress.certManager.issuerGroup | quote }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "lux-railway-map-overlay.fullname" $ }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- else if and .Values.ingress.certManager.enabled .Values.ingress.certManager.addDefaultTls }}
+  tls:
+    - secretName: {{ include "lux-railway-map-overlay.fullname" . }}-tls
+      hosts:
+        {{- range .Values.ingress.hosts }}
+        - {{ .host | quote }}
+        {{- end }}
+  {{- end }}
+{{- end }}

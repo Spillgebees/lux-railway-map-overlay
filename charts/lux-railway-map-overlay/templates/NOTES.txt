@@ -1,0 +1,4 @@
+1. Ensure your PVC mounted at /data contains lux-railway-map-overlay.mbtiles.
+2. If you expose the service publicly, set publicUrl to the external URL so style.json advertises the correct endpoints.
+3. Retrieve the service endpoint with:
+   kubectl get svc {{ include "lux-railway-map-overlay.fullname" . }} -n {{ .Release.Namespace }}
