@@ -31,6 +31,7 @@ jobs:
     if: github.repository == 'Spillgebees/lux-railway-map-overlay'
     env:
       COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -117,9 +118,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Trigger Coolify deployment
-        if: env.COOLIFY_WEBHOOK != ''
+        if: env.COOLIFY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
         run: |
-          response=$(curl -s -w "\n%{http_code}" "$COOLIFY_WEBHOOK")
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            "$COOLIFY_WEBHOOK")
           http_code=$(echo "$response" | tail -1)
           if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
             echo "Deployment trigger failed with HTTP $http_code"
