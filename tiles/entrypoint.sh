@@ -72,7 +72,6 @@ sed -i "s|http://localhost:3000|${PUBLIC_URL}|g" /tmp/style.json
 echo "Starting Martin tile server..."
 martin \
     --listen-addresses 127.0.0.1:3001 \
-    --base-url "${PUBLIC_URL}" \
     --sprite /styles/symbols \
     "${MBTILES_PATH}" &
 
