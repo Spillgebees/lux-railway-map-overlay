@@ -2,6 +2,7 @@
 
 [![Validate](https://github.com/Spillgebees/lux-railway-map-overlay/actions/workflows/validate.yml/badge.svg)](https://github.com/Spillgebees/lux-railway-map-overlay/actions/workflows/validate.yml)
 [![Publish Tile Image](https://github.com/Spillgebees/lux-railway-map-overlay/actions/workflows/publish-image.yml/badge.svg)](https://github.com/Spillgebees/lux-railway-map-overlay/actions/workflows/publish-image.yml)
+[![GHCR](https://ghcr-badge.egpl.dev/spillgebees/lux-railway-map-overlay/latest_tag?trim=major&label=latest)](https://github.com/Spillgebees/lux-railway-map-overlay/pkgs/container/lux-railway-map-overlay)
 
 ![Railway overlay on Positron basemap showing Luxembourg station area with track types, routes, tram stops, and tunnel labels](docs/images/cover.png)
 
@@ -10,6 +11,12 @@ Self-hostable railway infrastructure tile server powered by OpenStreetMap data. 
 ## Overview
 
 This project produces a transparent vector tile overlay of railway infrastructure relevant to Luxembourg, including adjacent cross-border context from Belgium, Germany, and France.
+
+Pre-built images are available on [GitHub Container Registry](https://github.com/Spillgebees/lux-railway-map-overlay/pkgs/container/lux-railway-map-overlay):
+
+```bash
+docker pull ghcr.io/spillgebees/lux-railway-map-overlay:latest
+```
 
 Two workflows:
 
