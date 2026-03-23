@@ -52,16 +52,13 @@ jobs:
         run: |
           echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
 
-      - name: Restore filtered source and Overpass cache
+      - name: Restore generator cache
         if: ${{ !inputs.fresh }}
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             data/cache/overpass/
             data/intermediate/sources/
-          # auto-invalidates when:
-          # - month changes (monthly cron picks up fresh OSM data)
-          # - pipeline code changes (filter tags, Overpass query, config)
           key: pipeline-${{ steps.cache-key.outputs.month }}-${{ hashFiles('scripts/generator/pipeline_sources.py', 'scripts/generator/pipeline.py', 'scripts/generator/config.py', 'scripts/generator/routes.py') }}
           restore-keys: |
             pipeline-${{ steps.cache-key.outputs.month }}-
@@ -77,6 +74,15 @@ jobs:
             lux-railway-generator:ci \
             --countries lu,be,de,fr \
             --output-dir /data
+
+      - name: Save generator cache
+        if: ${{ !inputs.fresh }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/cache/overpass/
+            data/intermediate/sources/
+          key: pipeline-${{ steps.cache-key.outputs.month }}-${{ hashFiles('scripts/generator/pipeline_sources.py', 'scripts/generator/pipeline.py', 'scripts/generator/config.py', 'scripts/generator/routes.py') }}
 
       - name: Verify route layers were generated
         run: |
@@ -119,13 +125,14 @@ jobs:
 
       - name: Trigger Coolify deployment
         if: env.COOLIFY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
+        continue-on-error: true
         run: |
           response=$(curl -s -w "\n%{http_code}" \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
             "$COOLIFY_WEBHOOK")
           http_code=$(echo "$response" | tail -1)
           if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
-            echo "Deployment trigger failed with HTTP $http_code"
+            echo "::warning::Coolify deployment trigger failed with HTTP $http_code"
             exit 1
           fi
           echo "Deployment triggered successfully"
