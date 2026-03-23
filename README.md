@@ -30,9 +30,9 @@ Two workflows:
 ## Quick Start
 
 1. Generate railway data (runs inside Docker, so no local tools are needed):
-   ```bash
-  LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm generate
-   ```
+```bash
+LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm generate
+```
   The Dockerfile defaults to the Luxembourg coverage set (`lu,be,de,fr`) so the generated dataset includes cross-border infrastructure that matters operationally around Luxembourg. The first run downloads ~8 GB of PBF data from Geofabrik and queries the Overpass API for route relations. Subsequent runs skip already-downloaded PBFs.
 
   The explicit `LOCAL_UID` and `LOCAL_GID` ensure generated files are owned by your host user instead of `root`. If your shell already exports matching values, the Compose defaults are sufficient.
@@ -112,14 +112,14 @@ flowchart TD
 
 ### Tools
 
-| Tool | Purpose |
-|---|---|
-| [osmium-tool](https://osmcode.org/osmium-tool/) | Filter and merge OpenStreetMap PBF extracts |
-| [GDAL/ogr2ogr](https://gdal.org/) | Convert PBF data to GeoJSON, Shapefiles, and GeoPackage |
-| [tippecanoe](https://github.com/felt/tippecanoe) | Generate vector tiles (.mbtiles) from GeoJSON with zoom-level control |
-| [Martin](https://maplibre.org/martin/) | Serve vector tiles and sprites from MBTiles |
-| [MapLibre GL](https://maplibre.org/) | Client-side vector tile rendering (style specification) |
-| [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) | Query OpenStreetMap for route relations |
+| Tool                                                             | Purpose                                                               |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [osmium-tool](https://osmcode.org/osmium-tool/)                  | Filter and merge OpenStreetMap PBF extracts                           |
+| [GDAL/ogr2ogr](https://gdal.org/)                                | Convert PBF data to GeoJSON, Shapefiles, and GeoPackage               |
+| [tippecanoe](https://github.com/felt/tippecanoe)                 | Generate vector tiles (.mbtiles) from GeoJSON with zoom-level control |
+| [Martin](https://maplibre.org/martin/)                           | Serve vector tiles and sprites from MBTiles                           |
+| [MapLibre GL](https://maplibre.org/)                             | Client-side vector tile rendering (style specification)               |
+| [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) | Query OpenStreetMap for route relations                               |
 
 The pipeline uses a **3-pass tippecanoe strategy** to handle the different density characteristics of the data:
 
