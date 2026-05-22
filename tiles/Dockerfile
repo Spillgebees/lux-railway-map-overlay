@@ -34,7 +34,7 @@ COPY tiles/glyphs/generate-glyphs.sh /glyphs/generate-glyphs.sh
 RUN chmod +x /glyphs/generate-glyphs.sh \
     && /glyphs/generate-glyphs.sh /glyphs/output /tmp/font-maker/build/font-maker
 
-FROM ghcr.io/maplibre/martin:v0.15.0 AS martin
+FROM ghcr.io/maplibre/martin:1.10.1@sha256:808afb520272ebf37ea582b0191bd7a2d87c3cf89a552000883bfbdbced9688c AS martin
 
 FROM nginxinc/nginx-unprivileged:stable-alpine-slim
 
