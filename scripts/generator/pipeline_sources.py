@@ -49,6 +49,18 @@ def build_merge_command(input_paths: list[Path], output_path: Path) -> list[str]
     ]
 
 
+def build_time_filter_command(input_path: Path, output_path: Path) -> list[str]:
+    return [
+        "osmium",
+        "time-filter",
+        str(input_path),
+        "2100-01-01T00:00:00Z",
+        "-o",
+        str(output_path),
+        "--overwrite",
+    ]
+
+
 def download_sources(
     countries: list[str],
     sources_dir: Path,
@@ -161,8 +173,11 @@ def merge_sources(
         input_paths = [
             filtered_source_path(filtered_sources_dir, code) for code in countries
         ]
+        history_path = merged_path.with_name("railway-merged-history.osm.pbf")
         info(f"Merging {len(countries)} countries...")
-        runner(build_merge_command(input_paths, merged_path))
+        runner(build_merge_command(input_paths, history_path))
+        runner(build_time_filter_command(history_path, merged_path))
+        history_path.unlink(missing_ok=True)
 
     info(f"Merged file: {size_formatter(merged_path.stat().st_size)}")
     return merged_path

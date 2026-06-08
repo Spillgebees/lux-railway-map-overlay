@@ -63,9 +63,9 @@ def test_write_routes_geojson_deduplicates_relations_and_keeps_best_geometry(
     tmp_path,
 ) -> None:
     routes_json_path = tmp_path / "overpass_routes.json"
-    stations_geojson_path = tmp_path / "railway_stations.geojson"
-    routes_geojson_path = tmp_path / "railway_routes.geojson"
-    routes_display_geojson_path = tmp_path / "railway_routes_display.geojson"
+    stations_geojson_path = tmp_path / "rail_stops.geojson"
+    routes_geojson_path = tmp_path / "rail_routes.geojson"
+    routes_display_geojson_path = tmp_path / "rail_routes_display.geojson"
 
     routes_json_path.write_text(
         json.dumps(
@@ -156,6 +156,9 @@ def test_write_routes_geojson_deduplicates_relations_and_keeps_best_geometry(
         "ref": "RE 1",
         "name": "RE 1: Luxembourg - Ettelbruck",
         "route": "train",
+        "osm_route": "train",
+        "mode": "heavy_rail",
+        "lifecycle_state": "active",
         "operator": "CFL",
         "colour": "#FF0000",
         "network": "RGTR",

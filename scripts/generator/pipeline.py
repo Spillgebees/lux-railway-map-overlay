@@ -15,6 +15,7 @@ from generator.layer_specs import (
     SHAPEFILE_LAYER_SPECS,
     STATION_TILE_LAYER_SPECS,
 )
+from generator.normalization import normalize_geojson_file
 from generator.platform_references import build_platform_reference_feature_collection
 from generator.pipeline_exports import (
     build_geopackage_command,
@@ -115,6 +116,7 @@ class GeneratorPipeline:
             self.convert_shapefiles,
             self.create_indexes,
             self.convert_geojson,
+            self.normalize_geojson,
             self.build_platform_reference_layer,
             self.extract_routes,
             self.generate_vector_tiles,
@@ -233,11 +235,24 @@ class GeneratorPipeline:
 
         self.console.info(f"GeoJSON conversion complete ({format_elapsed(step_start)})")
 
+    def normalize_geojson(self) -> None:
+        step_start = self._start_step("Normalizing public GeoJSON layer schema")
+
+        for layer_name, _, _ in GEOJSON_LAYER_SPECS:
+            normalize_geojson_file(
+                self.settings.geojson_dir / f"{layer_name}.geojson", layer_name
+            )
+            self.console.info(f"Normalized {layer_name}...")
+
+        self.console.info(
+            f"GeoJSON normalization complete ({format_elapsed(step_start)})"
+        )
+
     def build_platform_reference_layer(self) -> None:
         step_start = self._start_step("Building optional platform/quay reference layer")
-        platforms_path = self.settings.geojson_dir / "railway_platforms.geojson"
-        stations_path = self.settings.geojson_dir / "railway_stations.geojson"
-        output_path = self.settings.geojson_dir / "railway_platform_refs.geojson"
+        platforms_path = self.settings.geojson_dir / "rail_platforms.geojson"
+        stations_path = self.settings.geojson_dir / "rail_stops.geojson"
+        output_path = self.settings.geojson_dir / "rail_platform_labels.geojson"
 
         platform_data = load_geojson(platforms_path)
         station_data = load_geojson(stations_path)
@@ -249,6 +264,7 @@ class GeneratorPipeline:
             json.dumps({"type": "FeatureCollection", "features": features}),
             encoding="utf-8",
         )
+        normalize_geojson_file(output_path, "rail_platform_labels")
         self.console.info(
             "Platform/quay references: "
             f"{len(features)} feature(s) "
@@ -261,11 +277,11 @@ class GeneratorPipeline:
     def extract_routes(self) -> None:
         step_start = self._start_step("Extracting route relations (Overpass API)")
         routes_json = self.settings.overpass_routes_path
-        routes_geojson = self.settings.geojson_dir / "railway_routes.geojson"
+        routes_geojson = self.settings.geojson_dir / "rail_routes.geojson"
         routes_display_geojson = (
-            self.settings.geojson_dir / "railway_routes_display.geojson"
+            self.settings.geojson_dir / "rail_routes_display.geojson"
         )
-        stations_geojson = self.settings.geojson_dir / "railway_stations.geojson"
+        stations_geojson = self.settings.geojson_dir / "rail_stops.geojson"
         bbox = COUNTRY_BBOX["lu"]
 
         if not self._ensure_route_response(
@@ -434,7 +450,7 @@ class GeneratorPipeline:
         run_commands_parallel(commands)
 
     def _export_geopackage_layers(self, gpkg_path) -> None:
-        """Append the configured GeoPackage layers in a fixed order."""
+        """Export the configured GeoPackage layers in a fixed order."""
         for layer_name, sql, extra_args in GPKG_LAYER_SPECS:
             self.console.info(f"Adding layer: {layer_name}...")
             run_command(

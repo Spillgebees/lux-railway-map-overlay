@@ -6,21 +6,6 @@
     <Nullable>enable</Nullable>
     <PublishTrimmed>false</PublishTrimmed>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
-    <BlazorMapProjectPath
-      Condition="'$(BlazorMapProjectPath)' == '' and '$(BLAZOR_MAP_PROJECT_PATH)' != ''"
-    >
-      $(BLAZOR_MAP_PROJECT_PATH)</BlazorMapProjectPath
-    >
-    <BlazorMapProjectPath
-      Condition="'$(BlazorMapProjectPath)' == '' and Exists('../../worktrees/Blazor.Map/feature/maptiler-pivot/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj')"
-    >
-      ../../worktrees/Blazor.Map/feature/maptiler-pivot/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj</BlazorMapProjectPath
-    >
-    <BlazorMapProjectPath
-      Condition="'$(BlazorMapProjectPath)' == '' and Exists('../../worktrees/Blazor.Map/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj')"
-    >
-      ../../worktrees/Blazor.Map/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj</BlazorMapProjectPath
-    >
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,20 +15,6 @@
       Version="10.0.5"
       PrivateAssets="all"
     />
+    <PackageReference Include="Spillgebees.Blazor.Map" Version="0.16.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference
-      Include="$(BlazorMapProjectPath)"
-      Condition="'$(BlazorMapProjectPath)' != ''"
-    />
-  </ItemGroup>
-
-  <Target
-    Name="ValidateBlazorMapReference"
-    BeforeTargets="CollectPackageReferences;ResolveReferences"
-    Condition="'$(BlazorMapProjectPath)' == ''"
-  >
-    <Error Text="Spillgebees.Blazor.Map project not found. Set BLAZOR_MAP_PROJECT_PATH or pass /p:BlazorMapProjectPath=/absolute/path/to/Spillgebees.Blazor.Map.csproj before building the viewer." />
-  </Target>
 </Project>

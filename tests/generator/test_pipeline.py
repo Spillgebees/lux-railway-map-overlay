@@ -19,7 +19,7 @@ def test_build_platform_reference_layer_prefers_platform_areas_and_keeps_unmatch
     geojson_dir = output_dir / "intermediate" / "geojson"
     geojson_dir.mkdir(parents=True)
 
-    (geojson_dir / "railway_platforms.geojson").write_text(
+    (geojson_dir / "rail_platforms.geojson").write_text(
         json.dumps(
             {
                 "type": "FeatureCollection",
@@ -50,7 +50,7 @@ def test_build_platform_reference_layer_prefers_platform_areas_and_keeps_unmatch
         ),
         encoding="utf-8",
     )
-    (geojson_dir / "railway_stations.geojson").write_text(
+    (geojson_dir / "rail_stops.geojson").write_text(
         json.dumps(
             {
                 "type": "FeatureCollection",
@@ -101,14 +101,14 @@ def test_build_platform_reference_layer_prefers_platform_areas_and_keeps_unmatch
     pipeline.build_platform_reference_layer()
 
     feature_collection = json.loads(
-        (geojson_dir / "railway_platform_refs.geojson").read_text(encoding="utf-8")
+        (geojson_dir / "rail_platform_labels.geojson").read_text(encoding="utf-8")
     )
     features = feature_collection["features"]
 
     assert len(features) == 2
     assert [feature["properties"]["source_layer"] for feature in features] == [
-        "railway_platforms",
-        "railway_stations",
+        "rail_platforms",
+        "rail_stops",
     ]
     assert features[0]["properties"]["platform_label"] == "Quai 2"
     assert features[1]["properties"]["platform_ref_label"] == "3"
@@ -137,7 +137,7 @@ def test_build_platform_reference_feature_uses_description_when_ref_missing() ->
             },
             "geometry": {"type": "Point", "coordinates": [6.12, 49.61]},
         },
-        source_layer="railway_stations",
+        source_layer="rail_stops",
         require_stop_position=True,
     )
 
@@ -186,6 +186,7 @@ def test_run_executes_pipeline_stages_in_order_and_creates_directories(
         "convert_shapefiles",
         "create_indexes",
         "convert_geojson",
+        "normalize_geojson",
         "build_platform_reference_layer",
         "extract_routes",
         "generate_vector_tiles",
@@ -216,6 +217,7 @@ def test_run_executes_pipeline_stages_in_order_and_creates_directories(
         "convert_shapefiles",
         "create_indexes",
         "convert_geojson",
+        "normalize_geojson",
         "build_platform_reference_layer",
         "extract_routes",
         "generate_vector_tiles",
@@ -239,6 +241,7 @@ def test_run_generation_stages_preserves_declared_stage_order(tmp_path) -> None:
         "convert_shapefiles",
         "create_indexes",
         "convert_geojson",
+        "normalize_geojson",
         "build_platform_reference_layer",
         "extract_routes",
         "generate_vector_tiles",
@@ -260,6 +263,7 @@ def test_run_generation_stages_preserves_declared_stage_order(tmp_path) -> None:
         "convert_shapefiles",
         "create_indexes",
         "convert_geojson",
+        "normalize_geojson",
         "build_platform_reference_layer",
         "extract_routes",
         "generate_vector_tiles",
@@ -375,7 +379,7 @@ def test_extract_routes_fails_by_default_when_overpass_unavailable(
     output_dir = tmp_path / "data"
     geojson_dir = output_dir / "intermediate" / "geojson"
     geojson_dir.mkdir(parents=True)
-    (geojson_dir / "railway_stations.geojson").write_text(
+    (geojson_dir / "rail_stops.geojson").write_text(
         json.dumps({"type": "FeatureCollection", "features": []}),
         encoding="utf-8",
     )
@@ -402,7 +406,7 @@ def test_extract_routes_can_soft_fail_when_missing_routes_are_allowed(
     output_dir = tmp_path / "data"
     geojson_dir = output_dir / "intermediate" / "geojson"
     geojson_dir.mkdir(parents=True)
-    (geojson_dir / "railway_stations.geojson").write_text(
+    (geojson_dir / "rail_stops.geojson").write_text(
         json.dumps({"type": "FeatureCollection", "features": []}),
         encoding="utf-8",
     )
@@ -427,8 +431,8 @@ def test_extract_routes_can_soft_fail_when_missing_routes_are_allowed(
     pipeline.extract_routes()
 
     assert json.loads(
-        (geojson_dir / "railway_routes.geojson").read_text(encoding="utf-8")
+        (geojson_dir / "rail_routes.geojson").read_text(encoding="utf-8")
     ) == {"type": "FeatureCollection", "features": []}
     assert json.loads(
-        (geojson_dir / "railway_routes_display.geojson").read_text(encoding="utf-8")
+        (geojson_dir / "rail_routes_display.geojson").read_text(encoding="utf-8")
     ) == {"type": "FeatureCollection", "features": []}

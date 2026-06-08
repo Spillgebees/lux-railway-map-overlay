@@ -136,7 +136,7 @@ def test_run_command_wraps_subprocess_error(monkeypatch) -> None:
 
 
 def test_tippecanoe_layer_arg_uses_geojson_dir_and_metadata(tmp_path) -> None:
-    assert tippecanoe_layer_arg(tmp_path, "railway_routes", "railway_routes", 5) == (
-        f'-L{{"file":"{tmp_path / "railway_routes.geojson"}", '
-        '"layer":"railway_routes", "minzoom":5}'
+    assert tippecanoe_layer_arg(tmp_path, "rail_routes", "rail_routes", 5) == (
+        f'-L{{"file":"{tmp_path / "rail_routes.geojson"}", '
+        '"layer":"rail_routes", "minzoom":5}'
     )

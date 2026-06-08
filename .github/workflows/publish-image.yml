@@ -96,8 +96,8 @@ jobs:
                   print(f'FAIL: {path} has no features')
                   sys.exit(1)
               print(f'OK: {path} has {len(features)} feature(s)')
-          " data/intermediate/geojson/railway_routes.geojson \
-            data/intermediate/geojson/railway_routes_display.geojson
+          " data/intermediate/geojson/rail_routes.geojson \
+            data/intermediate/geojson/rail_routes_display.geojson
 
       - name: Prepare production bundle
         run: |

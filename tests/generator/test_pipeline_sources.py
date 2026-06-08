@@ -8,6 +8,7 @@ from generator.pipeline_support import PipelineError
 from generator.pipeline_sources import (
     build_filter_command,
     build_merge_command,
+    build_time_filter_command,
     download_sources,
     filter_sources,
     filtered_source_path,
@@ -53,6 +54,18 @@ def test_build_filter_and_merge_commands_use_expected_arguments(tmp_path) -> Non
         "merge",
         str(tmp_path / "lu-railway.osm.pbf"),
         str(tmp_path / "be-railway.osm.pbf"),
+        "-o",
+        str(tmp_path / "railway-merged.osm.pbf"),
+        "--overwrite",
+    ]
+    assert build_time_filter_command(
+        tmp_path / "railway-merged-history.osm.pbf",
+        tmp_path / "railway-merged.osm.pbf",
+    ) == [
+        "osmium",
+        "time-filter",
+        str(tmp_path / "railway-merged-history.osm.pbf"),
+        "2100-01-01T00:00:00Z",
         "-o",
         str(tmp_path / "railway-merged.osm.pbf"),
         "--overwrite",
@@ -159,7 +172,10 @@ def test_merge_sources_copies_single_country_and_runs_merge_for_multiple(
 
     def runner(command: list[str]) -> None:
         multi_calls.append(command)
-        (tmp_path / "railway-merged.osm.pbf").write_bytes(b"merged")
+        if command[1] == "merge":
+            (tmp_path / "railway-merged-history.osm.pbf").write_bytes(b"history")
+        if command[1] == "time-filter":
+            (tmp_path / "railway-merged.osm.pbf").write_bytes(b"merged")
 
     merge_sources(
         ["lu", "be"],
@@ -175,7 +191,12 @@ def test_merge_sources_copies_single_country_and_runs_merge_for_multiple(
         "Merging 2 countries...",
         build_merge_command(
             [tmp_path / "lu-railway.osm.pbf", tmp_path / "be-railway.osm.pbf"],
+            tmp_path / "railway-merged-history.osm.pbf",
+        ),
+        build_time_filter_command(
+            tmp_path / "railway-merged-history.osm.pbf",
             tmp_path / "railway-merged.osm.pbf",
         ),
         "Merged file: 6B",
     ]
+    assert not (tmp_path / "railway-merged-history.osm.pbf").exists()

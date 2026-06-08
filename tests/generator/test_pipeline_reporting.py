@@ -69,14 +69,16 @@ def test_print_pipeline_summary_lists_outputs_and_layers(tmp_path, capsys) -> No
     deliverables_dir.mkdir(parents=True)
 
     (output_dir / "intermediate" / "railway-merged.osm.pbf").write_bytes(b"1234")
-    (shapefile_dir / "railway_lines.shp").write_bytes(b"12")
-    (geojson_dir / "railway_routes.geojson").write_bytes(b"123")
+    (shapefile_dir / "rail_tracks.shp").write_bytes(b"12")
+    (geojson_dir / "rail_routes.geojson").write_bytes(b"123")
     (deliverables_dir / "railway-data.gpkg").write_bytes(b"12345")
 
     settings = Settings(countries=("lu",), output_dir=output_dir, script_dir=tmp_path)
 
     def fake_runner(*args, **kwargs):
-        return SimpleNamespace(stdout="1: railway_lines\nfoo\n2: railway_points\n")
+        return SimpleNamespace(
+            stdout="1: rail_tracks\nfoo\n2: rail_infrastructure_points\n"
+        )
 
     print_pipeline_summary(
         settings,
@@ -90,8 +92,8 @@ def test_print_pipeline_summary_lists_outputs_and_layers(tmp_path, capsys) -> No
     captured = capsys.readouterr().out
     assert "Countries: Luxembourg" in captured
     assert "intermediate/railway-merged.osm.pbf" in captured
-    assert "intermediate/shp/railway_lines.shp" in captured
-    assert "intermediate/geojson/railway_routes.geojson" in captured
+    assert "intermediate/shp/rail_tracks.shp" in captured
+    assert "intermediate/geojson/rail_routes.geojson" in captured
     assert "GeoPackage layers:" in captured
-    assert "1: railway_lines" in captured
-    assert "2: railway_points" in captured
+    assert "1: rail_tracks" in captured
+    assert "2: rail_infrastructure_points" in captured
