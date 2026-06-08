@@ -21,7 +21,7 @@ def log_pipeline_start(console: Console, settings: Settings) -> None:
 
 def log_pipeline_complete(console: Console, total_start: float) -> None:
     console.info(f"Total elapsed time: {format_elapsed(total_start)}")
-    console.info("Data attribution: (c) OpenStreetMap contributors (ODbL)")
+    console.info("Data attribution: © OpenStreetMap contributors (ODbL)")
 
 
 def start_step(console: Console, message: str) -> float:

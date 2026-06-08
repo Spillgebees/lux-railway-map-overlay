@@ -23,7 +23,7 @@ def build_platform_reference_feature_collection(
     for feature in platform_data.get("features", []):
         platform_ref_feature = build_platform_reference_feature(
             feature,
-            source_layer="railway_platforms",
+            source_layer="rail_platforms",
             require_stop_position=False,
         )
         if platform_ref_feature is not None:
@@ -32,7 +32,7 @@ def build_platform_reference_feature_collection(
     for feature in station_data.get("features", []):
         platform_ref_feature = build_platform_reference_feature(
             feature,
-            source_layer="railway_stations",
+            source_layer="rail_stops",
             require_stop_position=True,
         )
         if platform_ref_feature is not None:
@@ -47,7 +47,7 @@ def build_platform_reference_feature_collection(
     platform_count = sum(
         1
         for feature in features
-        if feature.get("properties", {}).get("source_layer") == "railway_platforms"
+        if feature.get("properties", {}).get("source_layer") == "rail_platforms"
     )
     stop_position_count = len(features) - platform_count
     return features, platform_count, stop_position_count

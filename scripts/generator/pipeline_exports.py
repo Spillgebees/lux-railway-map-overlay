@@ -48,6 +48,10 @@ def build_geopackage_command(
         "--config",
         "OSM_CONFIG_FILE",
         str(osmconf_path),
+        # disable custom indexing; filtered extracts stream without GDAL temp indexes.
+        "--config",
+        "OSM_USE_CUSTOM_INDEXING",
+        "NO",
         "-t_srs",
         "EPSG:4326",
         "-sql",

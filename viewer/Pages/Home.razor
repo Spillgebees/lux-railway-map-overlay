@@ -3,10 +3,117 @@
 
 <PageTitle>Railway Tile Viewer</PageTitle>
 
-<SgbMap MapOptions="@_mapOptions"        Height="100%" />
+<div class="viewer-shell">
+    <SgbMap @ref="_map" MapOptions="@_mapOptions" Height="100%" />
+
+    <aside class="filter-showcase" aria-label="Rail layer filtering showcase">
+        <div class="panel-kicker">Normalized rail schema</div>
+        <h1>Filter by family, mode, and lifecycle</h1>
+        <p>
+            The overlay now emits normalized tile layers and first-class fields so consuming
+            maps can toggle rail, tram, metro, miniature, lifecycle, and infrastructure
+            categories without parsing raw OSM tags.
+        </p>
+
+        <section class="filter-section" aria-labelledby="family-heading">
+            <h2 id="family-heading">Family toggles</h2>
+            <div class="toggle-grid compact">
+                @foreach (var family in _familyToggles)
+                {
+                    <label class="toggle-chip family" style="--accent:@family.Color">
+                        <input
+                            type="checkbox"
+                            checked="@family.IsEnabled"
+                            @onchange="@(async args => await SetToggleAsync(family, args))" />
+                        <span>@family.Label</span>
+                    </label>
+                }
+            </div>
+        </section>
+
+        <section class="filter-section" aria-labelledby="mode-heading">
+            <h2 id="mode-heading">Mode toggles</h2>
+            <div class="toggle-grid">
+                @foreach (var mode in _modeToggles)
+                {
+                    <label class="toggle-chip" style="--accent:@mode.Color">
+                        <input
+                            type="checkbox"
+                            checked="@mode.IsEnabled"
+                            @onchange="@(async args => await SetToggleAsync(mode, args))" />
+                        <span>@mode.Label</span>
+                    </label>
+                }
+            </div>
+        </section>
+
+        <section class="filter-section" aria-labelledby="state-heading">
+            <h2 id="state-heading">Lifecycle toggles</h2>
+            <div class="toggle-grid compact">
+                @foreach (var state in _stateToggles)
+                {
+                    <label class="toggle-chip state" style="--accent:@state.Color">
+                        <input
+                            type="checkbox"
+                            checked="@state.IsEnabled"
+                            @onchange="@(async args => await SetToggleAsync(state, args))" />
+                        <span>@state.Label</span>
+                    </label>
+                }
+            </div>
+        </section>
+
+        <section class="filter-section expression-card" aria-labelledby="expression-heading">
+            <h2 id="expression-heading">Consumer filter example</h2>
+            <code>@BuildSelectedTokenSummary()</code>
+            <small>
+                The demo applies layer visibility to composed style layers whose metadata.toggle
+                tokens match the selected families, modes, and lifecycle states.
+            </small>
+        </section>
+    </aside>
+</div>
 
 @code {
+    private const string OverlayStyleId = "lux-railway-overlay";
+
+    private SgbMap? _map;
     private MapOptions _mapOptions = null!;
+    private readonly ToggleOption[] _familyToggles =
+    [
+        new("tracks", "Tracks", "#111827"),
+        new("routes", "Routes", "#5b6675"),
+        new("stops", "Stops", "#0f172a"),
+        new("platforms", "Platforms", "#d97706"),
+        new("crossings", "Crossings", "#f97316"),
+        new("infrastructure", "Infrastructure", "#2563eb"),
+        new("areas", "Areas", "#b45309"),
+    ];
+
+    private readonly ToggleOption[] _modeToggles =
+    [
+        new("heavy_rail", "Heavy rail", "#111827"),
+        new("light_rail", "Light rail", "#0ea5e9"),
+        new("tram", "Tram", "#dc2626"),
+        new("metro", "Metro", "#7c3aed"),
+        new("narrow_gauge", "Narrow gauge", "#92400e"),
+        new("monorail", "Monorail", "#0891b2"),
+        new("funicular", "Funicular", "#be185d"),
+        new("miniature", "Miniature", "#65a30d"),
+    ];
+
+    private readonly ToggleOption[] _stateToggles =
+    [
+        new("active", "Active", "#111827"),
+        new("construction", "Construction", "#f59e0b"),
+        new("proposed", "Proposed", "#a78bfa"),
+        new("disused", "Disused", "#64748b"),
+        new("abandoned", "Abandoned", "#94a3b8"),
+        new("razed", "Razed", "#cbd5e1"),
+        new("preserved", "Preserved", "#16a34a"),
+    ];
+
+    private readonly StyleLayerToggle[] _styleLayers = BuildStyleLayerToggles();
 
     protected override void OnInitialized()
     {
@@ -23,4 +130,122 @@
             ComposedGlyphsUrl: $"{tileServerUrl}/fonts/{{fontstack}}/{{range}}.pbf"
         );
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _map is null)
+        {
+            return;
+        }
+
+        await ApplyLayerVisibilityAsync();
+    }
+
+    private async Task SetToggleAsync(ToggleOption option, ChangeEventArgs args)
+    {
+        option.IsEnabled = args.Value is bool isChecked && isChecked;
+        await ApplyLayerVisibilityAsync();
+    }
+
+    private async Task ApplyLayerVisibilityAsync()
+    {
+        if (_map is null)
+        {
+            return;
+        }
+
+        foreach (var layer in _styleLayers)
+        {
+            await _map.SetStyleLayerVisibilityAsync(OverlayStyleId, layer.Id, IsLayerVisible(layer));
+        }
+    }
+
+    private bool IsLayerVisible(StyleLayerToggle layer)
+    {
+        return ToggleGroupEnabled(_familyToggles, layer.Tokens)
+            && ToggleGroupEnabled(_stateToggles, layer.Tokens)
+            && ToggleGroupEnabled(_modeToggles, layer.Tokens);
+    }
+
+    private static bool ToggleGroupEnabled(IEnumerable<ToggleOption> toggles, IReadOnlyList<string> layerTokens)
+    {
+        var matchingToggles = toggles.Where(toggle => layerTokens.Contains(toggle.Token)).ToArray();
+        return matchingToggles.Length == 0 || matchingToggles.Any(toggle => toggle.IsEnabled);
+    }
+
+    private string BuildSelectedTokenSummary()
+    {
+        var selectedModes = _modeToggles
+            .Where(toggle => toggle.IsEnabled)
+            .Select(toggle => toggle.Token);
+        return $"visible modes: {string.Join(", ", selectedModes)}";
+    }
+
+    private static StyleLayerToggle[] BuildStyleLayerToggles()
+    {
+        return
+        [
+            new("railway-areas-fill", ["areas"]),
+            new("railway-areas-outline", ["areas"]),
+            new("railway-line-rail", ["tracks", "heavy_rail", "active"]),
+            new("railway-line-light-rail", ["tracks", "light_rail", "active"]),
+            new("railway-line-subway", ["tracks", "metro", "active"]),
+            new("railway-line-narrow-gauge", ["tracks", "narrow_gauge", "active"]),
+            new("railway-line-funicular", ["tracks", "funicular", "active"]),
+            new("railway-line-monorail", ["tracks", "monorail", "active"]),
+            new("railway-line-miniature", ["tracks", "miniature", "active"]),
+            new("railway-line-service", ["tracks", "heavy_rail", "active"]),
+            new("tram-line-fill", ["tracks", "tram", "active"]),
+            new("railway-line-tunnel", ["tracks", "heavy_rail", "active"]),
+            new("tram-line-tunnel", ["tracks", "tram", "active"]),
+            new("railway-lifecycle-construction", ["tracks", "construction"]),
+            new("railway-lifecycle-proposed", ["tracks", "proposed"]),
+            new("railway-lifecycle-disused", ["tracks", "disused"]),
+            new("railway-lifecycle-abandoned", ["tracks", "abandoned"]),
+            new("railway-lifecycle-preserved", ["tracks", "preserved"]),
+            new("railway-lifecycle-razed", ["tracks", "razed"]),
+            new("tram-lifecycle-construction", ["tracks", "tram", "construction"]),
+            new("tram-lifecycle-proposed", ["tracks", "tram", "proposed"]),
+            new("tram-lifecycle-disused", ["tracks", "tram", "disused"]),
+            new("tram-lifecycle-abandoned", ["tracks", "tram", "abandoned"]),
+            new("tram-lifecycle-razed", ["tracks", "tram", "razed"]),
+            new("light-rail-lifecycle-construction", ["tracks", "light_rail", "construction"]),
+            new("light-rail-lifecycle-proposed", ["tracks", "light_rail", "proposed"]),
+            new("light-rail-lifecycle-disused", ["tracks", "light_rail", "disused"]),
+            new("light-rail-lifecycle-abandoned", ["tracks", "light_rail", "abandoned"]),
+            new("light-rail-lifecycle-razed", ["tracks", "light_rail", "razed"]),
+            new("railway-platforms-fill", ["platforms"]),
+            new("railway-platforms-3d", ["platforms"]),
+            new("railway-switches", ["infrastructure"]),
+            new("railway-signals", ["infrastructure"]),
+            new("railway-buffer-stops", ["infrastructure"]),
+            new("railway-milestones", ["infrastructure"]),
+            new("railway-turntables", ["infrastructure"]),
+            new("railway-derails", ["infrastructure"]),
+            new("railway-crossings-track", ["infrastructure"]),
+            new("railway-owner-change", ["infrastructure"]),
+            new("railway-crossings-circle", ["crossings"]),
+            new("railway-tram-crossings-circle", ["crossings", "tram"]),
+            new("railway-routes-casing", ["routes"]),
+            new("railway-routes", ["routes"]),
+            new("railway-routes-label", ["routes"]),
+            new("railway-tunnel-label", ["infrastructure"]),
+            new("railway-border-circle", ["stops"]),
+            new("railway-border-label", ["stops"]),
+            new("tram-stations-icon", ["stops", "tram"]),
+            new("subway-entrance-icon", ["stops", "metro"]),
+            new("railway-stations-circle", ["stops", "heavy_rail"]),
+            new("railway-platforms-label", ["platforms"]),
+            new("railway-platform-refs-label", ["platforms"]),
+            new("railway-platform-names-label", ["platforms"]),
+            new("railway-stations-label", ["stops", "heavy_rail"]),
+        ];
+    }
+
+    private sealed record ToggleOption(string Token, string Label, string Color)
+    {
+        public bool IsEnabled { get; set; } = true;
+    }
+
+    private sealed record StyleLayerToggle(string Id, IReadOnlyList<string> Tokens);
 }

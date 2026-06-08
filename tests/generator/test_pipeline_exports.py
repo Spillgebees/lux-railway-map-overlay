@@ -28,7 +28,7 @@ def test_export_vector_layers_builds_expected_geojson_outputs(
     export_vector_layers(
         tmp_path,
         tmp_path / "merged.osm.pbf",
-        (("railway_lines", "SELECT * FROM lines", []),),
+        (("rail_tracks", "SELECT * FROM lines", []),),
         output_format="GeoJSON",
         file_suffix=".geojson",
         extra_args=["-lco", "RFC7946=YES"],
@@ -37,10 +37,10 @@ def test_export_vector_layers_builds_expected_geojson_outputs(
         logger=messages.append,
     )
 
-    assert messages == ["railway_lines"]
+    assert messages == ["rail_tracks"]
     assert calls == [
         {
-            "output_path": tmp_path / "railway_lines.geojson",
+            "output_path": tmp_path / "rail_tracks.geojson",
             "source_path": tmp_path / "merged.osm.pbf",
             "output_format": "GeoJSON",
             "sql": "SELECT * FROM lines",
@@ -101,9 +101,9 @@ def test_build_geopackage_command_uses_expected_arguments(tmp_path) -> None:
         tmp_path / "railway-data.gpkg",
         tmp_path / "merged.osm.pbf",
         tmp_path / "osmconf.ini",
-        "railway_lines",
+        "rail_tracks",
         "SELECT * FROM lines",
-        ["-append"],
+        ["-update"],
     ) == [
         "ogr2ogr",
         "-f",
@@ -113,11 +113,48 @@ def test_build_geopackage_command_uses_expected_arguments(tmp_path) -> None:
         "--config",
         "OSM_CONFIG_FILE",
         str(tmp_path / "osmconf.ini"),
+        "--config",
+        "OSM_USE_CUSTOM_INDEXING",
+        "NO",
         "-t_srs",
         "EPSG:4326",
         "-sql",
         "SELECT * FROM lines",
         "-nln",
-        "railway_lines",
-        "-append",
+        "rail_tracks",
+        "-update",
     ]
+
+
+def test_build_geopackage_command_disables_gdal_osm_custom_indexing(tmp_path) -> None:
+    # arrange
+    command = build_geopackage_command(
+        tmp_path / "railway-data.gpkg",
+        tmp_path / "merged.osm.pbf",
+        tmp_path / "osmconf.ini",
+        "rail_tracks",
+        "SELECT * FROM lines",
+        [],
+    )
+
+    # act
+    custom_index_config_index = command.index("OSM_USE_CUSTOM_INDEXING")
+
+    # assert
+    assert command[custom_index_config_index - 1] == "--config"
+    assert command[custom_index_config_index + 1] == "NO"
+
+
+def test_geopackage_layer_specs_use_update_for_subsequent_layers() -> None:
+    # arrange
+    from generator.layer_specs import GPKG_LAYER_SPECS
+
+    # act
+    first_args = GPKG_LAYER_SPECS[0][2]
+    subsequent_args = [extra_args for _, _, extra_args in GPKG_LAYER_SPECS[1:]]
+
+    # assert
+    assert first_args == []
+    assert subsequent_args
+    assert all("-update" in extra_args for extra_args in subsequent_args)
+    assert all("-append" not in extra_args for extra_args in subsequent_args)

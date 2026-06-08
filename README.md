@@ -149,32 +149,14 @@ The repository includes a lightweight task layer in `.vscode/tasks.json` for the
 
 1. `Generate Data`: run the Dockerized generator with host UID/GID mapping.
 2. `Start Tile Server`: run `docker compose up` for the local Martin/nginx stack.
-3. `Run Viewer`: start the Blazor viewer, with an optional prompt for the external `Spillgebees.Blazor.Map` project path when you are not using one of the default sibling worktree locations (see Viewer Dependency below).
+3. `Run Viewer`: start the Blazor viewer. It uses the packaged `Spillgebees.Blazor.Map` dependency (see Viewer Dependency below).
 4. `Validate Fast`: run the same lightweight checks used by the fast validation workflow.
 
 These tasks are intended as the default local command surface so the common workflows stay consistent across contributors.
 
 ## Viewer Dependency
 
-The demo viewer currently builds against a local `Spillgebees.Blazor.Map` project reference that lives outside this repository.
-
-Supported resolution order:
-
-1. `BLAZOR_MAP_PROJECT_PATH` environment variable.
-2. `BlazorMapProjectPath` MSBuild property.
-3. Sibling worktree at `../../worktrees/Blazor.Map/feature/maptiler-pivot/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj`.
-4. Sibling worktree at `../../worktrees/Blazor.Map/src/Spillgebees.Blazor.Map/Spillgebees.Blazor.Map.csproj`.
-
-Examples:
-
-```bash
-export BLAZOR_MAP_PROJECT_PATH=/absolute/path/to/Spillgebees.Blazor.Map.csproj
-cd viewer && dotnet run --project RailwayViewer.csproj
-```
-
-```bash
-cd viewer && dotnet run --project RailwayViewer.csproj /p:BlazorMapProjectPath=/absolute/path/to/Spillgebees.Blazor.Map.csproj
-```
+The demo viewer builds against the `Spillgebees.Blazor.Map` package by default (`0.16.0`). The current project file does not define an external local project-reference fallback.
 
 ## Local Validation
 
@@ -314,7 +296,7 @@ Supplying CSS `@font-face` web fonts alone does not satisfy MapLibre's `glyphs` 
 
 Railway data is sourced from [OpenStreetMap](https://www.openstreetmap.org/) and licensed under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/).
 
-(c) OpenStreetMap contributors
+© OpenStreetMap contributors
 
 For any public distribution of generated database-form outputs such as the GeoPackage, or for a public service backed directly by those database artifacts, keep the OpenStreetMap attribution visible and be prepared to provide the corresponding derived database under the ODbL terms.
 

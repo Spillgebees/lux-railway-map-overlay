@@ -25,6 +25,7 @@ from generator.route_display import (
     resolve_display_color,
     resolve_display_text_color,
 )
+from generator.normalization import normalize_geojson_file
 
 
 @dataclass
@@ -172,6 +173,7 @@ def write_routes_geojson(
                 "ref": ref,
                 "name": tags.get("name", ""),
                 "route": tags.get("route", ""),
+                "osm_route": tags.get("route", ""),
                 "operator": tags.get("operator", ""),
                 "colour": normalize_hex_color(tags.get("colour", "")),
                 "network": tags.get("network", ""),
@@ -232,9 +234,11 @@ def write_routes_geojson(
 
     routes_geojson = {"type": "FeatureCollection", "features": canonical_features}
     routes_geojson_path.write_text(json.dumps(routes_geojson), encoding="utf-8")
+    normalize_geojson_file(routes_geojson_path, "rail_routes")
 
     routes_display_geojson = {"type": "FeatureCollection", "features": display_features}
     routes_display_geojson_path.write_text(
         json.dumps(routes_display_geojson), encoding="utf-8"
     )
+    normalize_geojson_file(routes_display_geojson_path, "rail_routes_display")
     return len(canonical_features), len(relations)

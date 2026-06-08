@@ -33,7 +33,7 @@ def test_build_tippecanoe_command_includes_common_flags_and_layers(tmp_path) -> 
     command = build_tippecanoe_command(
         tmp_path,
         tmp_path / "lines.mbtiles",
-        (("railway_lines", "railway_lines", 2),),
+        (("rail_tracks", "rail_tracks", 2),),
         ["-r1", "--no-feature-limit"],
     )
 
@@ -48,8 +48,8 @@ def test_build_tippecanoe_command_includes_common_flags_and_layers(tmp_path) -> 
     assert "-r1" in command
     assert "--no-feature-limit" in command
     assert command[-1] == (
-        f'-L{{"file":"{tmp_path / "railway_lines.geojson"}", '
-        '"layer":"railway_lines", "minzoom":2}'
+        f'-L{{"file":"{tmp_path / "rail_tracks.geojson"}", '
+        '"layer":"rail_tracks", "minzoom":2}'
     )
 
 
