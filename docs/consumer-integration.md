@@ -249,4 +249,4 @@ When composing styles, all participating styles must share a single glyph endpoi
 
 Railway data is sourced from [OpenStreetMap](https://www.openstreetmap.org/) and licensed under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/).
 
-Any public use must include: **(c) OpenStreetMap contributors**
+Any public use must include: **© OpenStreetMap contributors**

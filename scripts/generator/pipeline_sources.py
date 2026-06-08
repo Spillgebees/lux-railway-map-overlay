@@ -8,6 +8,9 @@ from pathlib import Path
 
 from generator.pipeline_support import PipelineError
 
+# Selects latest/current state from OSM history files.
+OSM_TIME_FILTER_END_DATE = "2100-01-01T00:00:00Z"
+
 
 def source_filename(url: str) -> str:
     return Path(urllib.parse.urlparse(url).path).name
@@ -54,7 +57,7 @@ def build_time_filter_command(input_path: Path, output_path: Path) -> list[str]:
         "osmium",
         "time-filter",
         str(input_path),
-        "2100-01-01T00:00:00Z",
+        OSM_TIME_FILTER_END_DATE,
         "-o",
         str(output_path),
         "--overwrite",

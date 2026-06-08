@@ -47,7 +47,7 @@ def test_log_pipeline_complete_reports_elapsed_and_attribution(monkeypatch) -> N
 
     assert console.messages == [
         ("info", "Total elapsed time: 1m 2s"),
-        ("info", "Data attribution: (c) OpenStreetMap contributors (ODbL)"),
+        ("info", "Data attribution: © OpenStreetMap contributors (ODbL)"),
     ]
 
 

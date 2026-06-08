@@ -131,6 +131,16 @@
         );
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _map is null)
+        {
+            return;
+        }
+
+        await ApplyLayerVisibilityAsync();
+    }
+
     private async Task SetToggleAsync(ToggleOption option, ChangeEventArgs args)
     {
         option.IsEnabled = args.Value is bool isChecked && isChecked;

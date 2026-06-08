@@ -296,7 +296,7 @@ Supplying CSS `@font-face` web fonts alone does not satisfy MapLibre's `glyphs` 
 
 Railway data is sourced from [OpenStreetMap](https://www.openstreetmap.org/) and licensed under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/).
 
-(c) OpenStreetMap contributors
+© OpenStreetMap contributors
 
 For any public distribution of generated database-form outputs such as the GeoPackage, or for a public service backed directly by those database artifacts, keep the OpenStreetMap attribution visible and be prepared to provide the corresponding derived database under the ODbL terms.
 
