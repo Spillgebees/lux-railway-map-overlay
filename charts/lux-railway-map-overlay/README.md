@@ -6,8 +6,9 @@ This chart deploys the production tile server image for Luxembourg Railway Infra
 
 - The chart defaults the Deployment strategy to `Recreate`, which is compatible with `ReadWriteOnce` storage (e.g., Azure Disk CSI on AKS, EBS on EKS, or standard PDs on GKE). If your storage supports `ReadWriteMany`, you can switch to a `RollingUpdate` strategy with multiple replicas.
 - The application runs as an unprivileged user (`101:101`) with `allowPrivilegeEscalation: false`, all Linux capabilities dropped, and `readOnlyRootFilesystem: true`.
-- A writable `emptyDir` is mounted at `/tmp` for nginx PID/temp files and runtime-rewritten style metadata.
-- The MBTiles volume is mounted read-only at `/data` and must contain `lux-railway-map-overlay.mbtiles`.
+- A writable `emptyDir` is mounted at `/tmp` for nginx PID/temp/cache files and runtime-rewritten style metadata. The default `tmpVolume.sizeLimit` is `64Mi`; the nginx proxy cache is capped at 32 MiB so the cache can fit alongside PID and temp files.
+- The MBTiles volume is mounted read-only at `/data` and must contain `/data/lux-railway-map-overlay.mbtiles`.
+- nginx listens on port 8080 and proxies Martin on `127.0.0.1:3001`; Martin serves sprites, health, catalog, TileJSON, tiles, and Prometheus metrics at `/_/metrics`.
 
 ## Example values
 

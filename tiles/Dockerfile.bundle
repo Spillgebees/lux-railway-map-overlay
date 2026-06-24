@@ -37,11 +37,16 @@ COPY tiles/glyphs/generate-glyphs.sh /glyphs/generate-glyphs.sh
 RUN chmod +x /glyphs/generate-glyphs.sh \
     && /glyphs/generate-glyphs.sh /glyphs/output /tmp/font-maker/build/font-maker
 
-FROM ghcr.io/maplibre/martin:v0.15.0 AS martin
+FROM ghcr.io/maplibre/martin:1.11.0
 
-FROM nginxinc/nginx-unprivileged:stable-alpine-slim
-
-COPY --from=martin /usr/local/bin/martin /usr/local/bin/martin
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    nginx \
+    wget \
+    && if getent group 101 >/dev/null; then :; elif getent group app >/dev/null; then groupmod --gid 101 app; else groupadd --system --gid 101 app; fi \
+    && if getent passwd 101 >/dev/null; then :; elif getent passwd app >/dev/null; then usermod --uid 101 --gid 101 --home-dir /nonexistent --shell /usr/sbin/nologin app; else useradd --system --uid 101 --gid 101 --home-dir /nonexistent --shell /usr/sbin/nologin app; fi \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /etc/nginx/sites-enabled /etc/nginx/conf.d /var/www/html
 
 COPY --chown=101:101 styles /styles
 COPY --from=glyphs --chown=101:101 /glyphs/output /styles/fonts

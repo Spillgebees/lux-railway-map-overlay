@@ -57,6 +57,8 @@ map.on("load", async () => {
 
 ## Tile Server Endpoints
 
+When deploying the Helm chart with an external data volume, mount the generated MBTiles at `/data/lux-railway-map-overlay.mbtiles`. Local Docker Compose workflows can keep using `data/out/lux-railway-map-overlay.mbtiles`, which is auto-detected in the container at `/data/out/lux-railway-map-overlay.mbtiles`.
+
 | Endpoint | Description |
 |---|---|
 | `/style.json` | Full MapLibre style with all layers pre-configured |
