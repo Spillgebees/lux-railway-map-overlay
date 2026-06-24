@@ -6,11 +6,11 @@
 
 ![Railway overlay on Positron basemap showing Luxembourg station area with track types, routes, tram stops, and tunnel labels](docs/images/cover.png)
 
-Self-hostable railway infrastructure tile server powered by OpenStreetMap data. Generates Luxembourg-focused railway infrastructure tiles with cross-border context from Belgium, Germany, and France, then serves them via MapLibre + Martin.
+Self-hostable railway infrastructure tile server powered by OpenStreetMap data. Generates Luxembourg-focused vector tiles with cross-border context from Belgium, Germany, and France, then serves them as a MapLibre overlay through Martin behind nginx.
 
 ## Overview
 
-This project produces a transparent vector tile overlay of railway infrastructure relevant to Luxembourg, including adjacent cross-border context from Belgium, Germany, and France.
+This project produces a transparent railway infrastructure overlay for use on top of any basemap. It ships generated MBTiles, a MapLibre style, self-hosted glyphs and sprites, a GeoPackage export, a Docker runtime, a Helm chart, and a separate Blazor demo viewer.
 
 Pre-built images are available on [GitHub Container Registry](https://github.com/Spillgebees/lux-railway-map-overlay/pkgs/container/lux-railway-map-overlay):
 
@@ -18,10 +18,10 @@ Pre-built images are available on [GitHub Container Registry](https://github.com
 docker pull ghcr.io/spillgebees/lux-railway-map-overlay:latest
 ```
 
-Two workflows:
+Common workflows:
 
-1. **Self-hosted**: Docker-based vector tile server (Martin + nginx), with an optional Blazor WASM viewer for local testing
-2. **Raw data for further processing**: generates vector tiles (`.mbtiles`) and a GeoPackage
+1. **Self-hosted tiles**: run the Martin/nginx tile server and optionally start the Blazor viewer for local testing
+2. **Data generation**: produce vector tiles (`.mbtiles`) and a GeoPackage for further processing
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ cd viewer && dotnet run --project RailwayViewer.csproj
 
 4. Browse to the URL shown by `dotnet run`
 
-The .NET solution now lives in `viewer/RailwayViewer.slnx`, alongside the Blazor project.
+The .NET solution lives in `viewer/RailwayViewer.slnx`, alongside the Blazor project.
 
 Generated data is split by purpose under `data/`:
 
@@ -107,7 +107,7 @@ flowchart TD
     H --> I
     I -->|tile-join| J["lux-railway-map-overlay.mbtiles"]
     J --> K["Martin tile server"]
-    K --> L["nginx reverse proxy<br/>(port 3000)"]
+    K --> L["nginx reverse proxy<br/>(container port 8080)"]
 ```
 
 ### Tools
@@ -117,7 +117,7 @@ flowchart TD
 | [osmium-tool](https://osmcode.org/osmium-tool/)                  | Filter and merge OpenStreetMap PBF extracts                           |
 | [GDAL/ogr2ogr](https://gdal.org/)                                | Convert PBF data to GeoJSON, Shapefiles, and GeoPackage               |
 | [tippecanoe](https://github.com/felt/tippecanoe)                 | Generate vector tiles (.mbtiles) from GeoJSON with zoom-level control |
-| [Martin](https://maplibre.org/martin/)                           | Serve vector tiles and sprites from MBTiles                           |
+| [Martin](https://maplibre.org/martin/)                             | Serve vector tiles, sprites, health, catalog, and metrics              |
 | [MapLibre GL](https://maplibre.org/)                             | Client-side vector tile rendering (style specification)               |
 | [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) | Query OpenStreetMap for route relations                               |
 
@@ -127,7 +127,7 @@ The pipeline uses a **3-pass tippecanoe strategy** to handle the different densi
 2. **Stations & routes**: point features that must always be present at their styled zoom, no dropping (`-r1`)
 3. **Detail**: dense infrastructure (signals, switches, crossings) that can be thinned at low zoom (`--drop-densest-as-needed`)
 
-The three intermediate `.mbtiles` are merged with `tile-join` into the final `data/out/lux-railway-map-overlay.mbtiles`. Martin serves uncompressed tiles and handles gzip/brotli compression on the wire.
+The intermediate `.mbtiles` files are merged with `tile-join` into `data/out/lux-railway-map-overlay.mbtiles`. The runtime image uses the official Martin image with nginx installed in the same container. nginx listens on port 8080 and proxies Martin on `127.0.0.1:3001`.
 
 ## Developer Docs
 
@@ -192,7 +192,9 @@ actionlint
 
 ## Tile Server
 
-The `tiles` service runs Martin behind nginx on port 3000. Key endpoints:
+The `tiles` service runs Martin behind nginx. nginx listens on container port 8080; Docker Compose maps it to `http://localhost:3000` for local development. Runtime metrics are exposed at `/_/metrics`. The Blazor demo viewer runs separately from Martin's optional Web UI.
+
+Key endpoints:
 
 | Endpoint                               | Description                        |
 | -------------------------------------- | ---------------------------------- |
@@ -203,6 +205,7 @@ The `tiles` service runs Martin behind nginx on port 3000. Key endpoints:
 | `/lux-railway-map-overlay/{z}/{x}/{y}` | Vector tile endpoint               |
 | `/catalog`                             | Martin tile catalog                |
 | `/health`                              | Health check                       |
+| `/_/metrics`                           | Martin Prometheus metrics          |
 
 ### PUBLIC_URL
 
@@ -218,7 +221,7 @@ PUBLIC_URL=https://tiles.example.com
 
 ### Cloudflare caching
 
-When deploying behind Cloudflare, vector tiles are cacheable by default (`.pbf` responses). The nginx layer sets appropriate cache headers. No special configuration is needed beyond proxying through Cloudflare.
+When deploying behind Cloudflare, proxy the service normally. nginx sends tile, sprite, and glyph responses with `public, max-age=3600`, keeps a small proxy cache for tiles, and sends runtime metadata such as `/style.json`, TileJSON, `/catalog`, `/health`, and `/_/metrics` with `no-store`.
 
 ### Hosted glyph stacks
 

@@ -1,5 +1,5 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
 MARTIN_PID=""
 NGINX_PID=""
@@ -22,6 +22,7 @@ echo "=== lux-railway-map-overlay tile server ==="
 
 mkdir -p \
     /tmp/nginx/client_temp \
+    /tmp/nginx/proxy_cache \
     /tmp/nginx/proxy_temp \
     /tmp/nginx/fastcgi_temp \
     /tmp/nginx/uwsgi_temp \
@@ -35,6 +36,8 @@ if [ -n "${MBTILES_PATH:-}" ]; then
     fi
 elif [ -f /app/data/lux-railway-map-overlay.mbtiles ]; then
     MBTILES_PATH="/app/data/lux-railway-map-overlay.mbtiles"
+elif [ -f /data/lux-railway-map-overlay.mbtiles ]; then
+    MBTILES_PATH="/data/lux-railway-map-overlay.mbtiles"
 elif [ -f /data/out/lux-railway-map-overlay.mbtiles ]; then
     MBTILES_PATH="/data/out/lux-railway-map-overlay.mbtiles"
 else
@@ -42,6 +45,7 @@ else
     echo ""
     echo "  MBTILES_PATH env var"
     echo "  /app/data/lux-railway-map-overlay.mbtiles"
+    echo "  /data/lux-railway-map-overlay.mbtiles"
     echo "  /data/out/lux-railway-map-overlay.mbtiles"
     echo ""
     echo "For local development, generate data first:"
