@@ -15,6 +15,6 @@
       Version="10.0.5"
       PrivateAssets="all"
     />
-    <PackageReference Include="Spillgebees.Blazor.Map" Version="0.16.0" />
+    <PackageReference Include="Spillgebees.Blazor.Map" Version="0.22.0" />
   </ItemGroup>
 </Project>
