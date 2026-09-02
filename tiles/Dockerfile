@@ -34,7 +34,7 @@ COPY tiles/glyphs/generate-glyphs.sh /glyphs/generate-glyphs.sh
 RUN chmod +x /glyphs/generate-glyphs.sh \
     && /glyphs/generate-glyphs.sh /glyphs/output /tmp/font-maker/build/font-maker
 
-FROM ghcr.io/maplibre/martin:1.11.0
+FROM ghcr.io/maplibre/martin:1.15.0@sha256:84f406ac96839aad3ea06ddaa68ef7617ed55305c21038c182d59f100e48dd6d
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
