@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/spillgebees/lux-railway-map-overlay
-  tag: ""
+  tag: "@sha256:6c46b0c7d0d30fe34277799846465a49d3c328a1c0a765b64f8d1b31a9b3d10f"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
