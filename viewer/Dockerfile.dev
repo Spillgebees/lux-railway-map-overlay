@@ -4,7 +4,7 @@
 # Mount the repository at /workspace/lux-railway-map-overlay. The viewer uses
 # the packaged Spillgebees.Blazor.Map dependency declared in RailwayViewer.csproj.
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29
 
 WORKDIR /workspace/lux-railway-map-overlay/viewer
 
