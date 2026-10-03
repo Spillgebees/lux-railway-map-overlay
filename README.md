@@ -80,7 +80,7 @@ LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm
 
 ### Alternative: local generation
 
-If you have `osmium-tool`, `gdal-bin`, `python3` (3.13+), and `tippecanoe` installed locally:
+If you have `osmium-tool`, `gdal-bin`, `python3` (3.14+), and `tippecanoe` installed locally:
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 cd scripts && python3 -m generator --countries lu --output-dir ../data

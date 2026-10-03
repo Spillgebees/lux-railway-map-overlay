@@ -1,6 +1,4 @@
-ARG PYTHON_VERSION=3.13
-
-FROM python:${PYTHON_VERSION}-slim AS tippecanoe-builder
+FROM python:3.14-slim-trixie@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4 AS tippecanoe-builder
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -17,7 +15,7 @@ RUN git clone --depth 1 https://github.com/felt/tippecanoe.git /tmp/tippecanoe \
     && make install \
     && rm -rf /tmp/tippecanoe
 
-FROM python:${PYTHON_VERSION}-slim
+FROM python:3.14-slim-trixie@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4
 
 WORKDIR /scripts
 
