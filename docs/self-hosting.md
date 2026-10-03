@@ -4,7 +4,7 @@ This guide covers running the tile server: the container image, its configuratio
 
 ## What runs in the container
 
-The tile server image runs two processes. Martin serves tiles, TileJSON, sprites, and health on `127.0.0.1:3001`. nginx listens on port `8080`, serves the style and glyphs itself, and proxies everything else to Martin. The container runs as the unprivileged user `101:101`. The image is based on `nginxinc/nginx-unprivileged` (Alpine) and adds Martin's statically linked musl release binary.
+The tile server image runs two processes. Martin serves tiles, TileJSON, sprites, and health on `127.0.0.1:3001`. nginx listens on port `8080`, serves the style and glyphs itself, and proxies everything else to Martin. The container runs as the unprivileged user `101:101`. If either process exits, the entrypoint stops the other one and the container exits with a non-zero status, so Docker or Kubernetes can restart it. On `SIGTERM` or `SIGINT` it stops both processes and exits with status 0. The image is based on `nginxinc/nginx-unprivileged` (Alpine) and adds Martin's statically linked musl release binary.
 
 `tiles/Dockerfile` has two targets:
 

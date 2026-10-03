@@ -1,14 +1,17 @@
-"""Tests for the PUBLIC_URL handling in tiles/entrypoint.sh.
+"""Tests for tiles/entrypoint.sh: PUBLIC_URL handling and process supervision.
 
 The tests source the entrypoint in bash and call its functions, so they run
-without Martin or nginx.
+without Martin or nginx. The supervision tests use sh and sleep as stand-ins.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import signal
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -108,3 +111,83 @@ def test_sourcing_the_entrypoint_does_not_start_the_server() -> None:
 
     assert result.returncode == 0, result.stderr
     assert result.stdout == ""
+
+
+SUPERVISE = """
+source "$1"
+trap 'shutdown INT' INT
+trap 'shutdown TERM' TERM
+trap 'signal_children TERM' EXIT
+PIDS_FILE="$2"
+sh -c "$3" &
+MARTIN_PID=$!
+sh -c "$4" &
+NGINX_PID=$!
+echo "${MARTIN_PID} ${NGINX_PID}" >"${PIDS_FILE}"
+supervise
+"""
+
+
+def start_supervisor(
+    tmp_path: Path, martin: str, nginx: str
+) -> tuple[subprocess.Popen[str], Path]:
+    pids = tmp_path / "pids"
+    process = subprocess.Popen(
+        ["bash", "-c", SUPERVISE, "bash", str(ENTRYPOINT), str(pids), martin, nginx],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    return process, pids
+
+
+def wait_for_pids(pids: Path) -> list[int]:
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if pids.exists() and pids.read_text().strip():
+            return [int(pid) for pid in pids.read_text().split()]
+        time.sleep(0.05)
+    raise AssertionError("supervisor did not start its children")
+
+
+def is_running(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+@pytest.mark.parametrize(
+    ("martin", "nginx", "expected_status", "expected_name"),
+    [
+        ("exit 3", "exec sleep 30", 3, "Martin"),
+        ("exec sleep 30", "exit 0", 1, "nginx"),
+        ("kill -KILL $$", "exec sleep 30", 137, "Martin"),
+    ],
+)
+def test_supervise_exits_when_either_child_exits(
+    tmp_path: Path, martin: str, nginx: str, expected_status: int, expected_name: str
+) -> None:
+    process, pids = start_supervisor(tmp_path, martin, nginx)
+
+    output, _ = process.communicate(timeout=10)
+
+    assert process.returncode == expected_status, output
+    assert f"{expected_name} exited unexpectedly" in output
+    assert not any(is_running(pid) for pid in wait_for_pids(pids))
+
+
+@pytest.mark.parametrize("sig", [signal.SIGTERM, signal.SIGINT])
+def test_shutdown_forwards_signal_to_both_children(
+    tmp_path: Path, sig: signal.Signals
+) -> None:
+    process, pids = start_supervisor(tmp_path, "exec sleep 30", "exec sleep 30")
+    children = wait_for_pids(pids)
+
+    process.send_signal(sig)
+    output, _ = process.communicate(timeout=10)
+
+    assert process.returncode == 0, output
+    assert f"Received {sig.name}" in output
+    assert not any(is_running(pid) for pid in children)

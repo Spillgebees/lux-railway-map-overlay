@@ -55,19 +55,71 @@ rewrite_style_urls() {
     printf '%s\n' "${style//"${STYLE_BASE_URL}"/"${url}"}" >"${target}"
 }
 
-cleanup() {
-    if [ -n "${NGINX_PID}" ]; then
-        kill "${NGINX_PID}" 2>/dev/null || true
+# Sends signal $1 to the children that have started.
+signal_children() {
+    local pid
+
+    for pid in "${NGINX_PID}" "${MARTIN_PID}"; do
+        if [ -n "${pid}" ]; then
+            kill "-$1" "${pid}" 2>/dev/null || true
+        fi
+    done
+}
+
+# Waits until every started child has exited, whatever its status.
+wait_for_children() {
+    local pid
+
+    for pid in "${NGINX_PID}" "${MARTIN_PID}"; do
+        if [ -n "${pid}" ]; then
+            wait "${pid}" 2>/dev/null || true
+        fi
+    done
+}
+
+# INT/TERM handler. Both signals are passed on as SIGTERM, because bash starts
+# background jobs with SIGINT ignored. A stop request is a clean exit, so this
+# exits 0 once both children are gone.
+shutdown() {
+    trap '' INT TERM
+
+    echo "Received SIG$1, stopping nginx and Martin..."
+    signal_children TERM
+    wait_for_children
+    exit 0
+}
+
+# Blocks until nginx or Martin exits, then stops the other one and exits with
+# the status of the one that exited, or 1 if that status was 0. A server that
+# exits without a stop request has failed either way.
+supervise() {
+    local exited_pid=""
+    local status=0
+    local name
+
+    wait -n -p exited_pid "${MARTIN_PID}" "${NGINX_PID}" || status=$?
+
+    case "${exited_pid}" in
+    "${MARTIN_PID}") name="Martin" ;;
+    "${NGINX_PID}") name="nginx" ;;
+    *) name="A child process" ;;
+    esac
+
+    echo "ERROR: ${name} exited unexpectedly with status ${status}"
+
+    if [ "${status}" -eq 0 ]; then
+        status=1
     fi
 
-    if [ -n "${MARTIN_PID}" ]; then
-        kill "${MARTIN_PID}" 2>/dev/null || true
-    fi
+    signal_children TERM
+    wait_for_children
+    exit "${status}"
 }
 
 main() {
-    trap 'cleanup; exit 0' INT TERM
-    trap cleanup EXIT
+    trap 'shutdown INT' INT
+    trap 'shutdown TERM' TERM
+    trap 'signal_children TERM' EXIT
 
     echo "=== lux-railway-map-overlay tile server ==="
 
@@ -149,24 +201,12 @@ main() {
         sleep 1
     done
 
-    # Start nginx and keep both processes under PID 1 supervision
+    # Start nginx, then supervise both processes as PID 1
     echo "Starting nginx on port 8080..."
     nginx -g "daemon off;" &
     NGINX_PID=$!
 
-    while :; do
-        if ! kill -0 "${MARTIN_PID}" 2>/dev/null; then
-            echo "ERROR: Martin exited unexpectedly"
-            exit 1
-        fi
-
-        if ! kill -0 "${NGINX_PID}" 2>/dev/null; then
-            echo "ERROR: nginx exited unexpectedly"
-            exit 1
-        fi
-
-        sleep 5
-    done
+    supervise
 }
 
 # Tests source this file to call the functions above without starting the server.
