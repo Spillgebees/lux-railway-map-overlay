@@ -1,63 +1,76 @@
 # lux-railway-map-overlay
 
-## Project Overview
+A railway overlay for Luxembourg and its cross-border lines into Belgium, Germany, and France. A Python pipeline turns OpenStreetMap data into vector tiles. Martin serves them behind nginx, and `styles/style.json` draws them over any basemap.
 
-Open-source railway infrastructure vector tile pipeline. Generates railway infrastructure data relevant to Luxembourg, including cross-border context from Belgium, Germany, and France, packages it as vector tiles with MapLibre-compatible styling, and serves via Martin.
+Read `README.md` for usage and `docs/` for depth. This file covers what to keep in mind when changing the code.
 
-## Deliverables
+## Layout
 
-| Output                                     | Purpose                                                                        |
-| ------------------------------------------ | ------------------------------------------------------------------------------ |
-| `data/out/lux-railway-map-overlay.mbtiles` | Vector tiles with railway infrastructure data                                  |
-| `styles/style.json`                        | MapLibre Style Spec: railway-only styling (transparent background, no basemap) |
-| `styles/symbols/`                          | SVG sprite icons (tunnel entrance, tram stop, subway entrance)                 |
-| `data/out/railway-data.gpkg`               | GeoPackage export for use in GIS applications                                  |
+| Path | Contents |
+| --- | --- |
+| `scripts/generator/` | The pipeline: Geofabrik extracts, Overpass route relations, GeoJSON, tippecanoe, GeoPackage |
+| `scripts/Dockerfile` | Generator image. Builds from the repo root and uses `scripts/Dockerfile.dockerignore` |
+| `tests/` | pytest for the generator, the style contract, and `tiles/entrypoint.sh` |
+| `styles/` | `style.json` and the SVG sprite icons in `symbols/` |
+| `tiles/` | Tile server image (`runtime` and `bundle` targets), `entrypoint.sh`, `nginx.conf`, glyph build |
+| `charts/lux-railway-map-overlay/` | Helm chart, published to `oci://ghcr.io/spillgebees/charts` |
+| `viewer/` | Blazor WebAssembly demo on `Spillgebees.Blazor.Map` |
+| `data/` | Ignored by git. `cache/` survives reruns, `intermediate/` is scratch, `out/` holds the deliverables |
 
-Consumers choose their own basemap and overlay the railway tiles on top.
+## Checks
 
-## Repository Structure
+CI runs these in `.github/workflows/validate.yml`. Run the ones for the area you touched:
 
-```
-lux-railway-map-overlay/
-├── scripts/          # Data generation pipeline (download, filter, convert to MBTiles)
-├── tests/            # pytest suite for the generator and the style contract
-├── styles/
-│   ├── style.json    # Railway-only MapLibre style (no basemap, transparent background)
-│   └── symbols/      # SVG icons (served by Martin as sprites)
-├── tiles/            # Tile server image (nginx in front of Martin), glyph build
-├── charts/           # Helm chart for the tile server
-├── docs/             # Consumer, self-hosting, and developer guides
-├── viewer/           # Blazor WASM demo app (uses Positron basemap + railway overlay)
-├── data/             # .gitignore'd: cache/, intermediate/, out/
-└── docker-compose.yml
+```bash
+uv sync --locked
+uv run ruff format --check && uv run ruff check && uv run basedpyright && uv run pytest
+dotnet csharpier check viewer && dotnet build viewer/RailwayViewer.slnx -c Release -warnaserror
+spec="$(sed -n 's/^  STYLE_SPEC_VERSION: //p' .github/workflows/validate.yml)"
+npx --yes --package "@maplibre/maplibre-gl-style-spec@$spec" gl-style-validate styles/style.json
+helm lint --strict charts/lux-railway-map-overlay --set image.tag=ci
 ```
 
-## Demo Flow
+The style check reads the style-spec version from `validate.yml`, so it matches CI. `helm lint` is the quick local check. CI's Helm job also renders every `ci/*-values.yaml` scenario, validates the output with kubeconform, and checks that the chart refuses the `0.0.0` placeholder tag and that the cert-manager scenario gets TLS.
 
-1. `LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm generate`: generate data (append e.g. `--countries lu` for a smaller run)
-2. `docker compose up`: start Martin tile server
-3. `cd viewer && dotnet run --project RailwayViewer.csproj`: start Blazor demo viewer
-4. Browse to the URL shown by `dotnet run`
+`uv run pre-commit install` adds ruff, basedpyright, CSharpier, Biome, ShellCheck, and actionlint as git hooks.
 
-## Data Lifecycle
+## Rules
 
-- `data/cache/`: retained inputs and API responses that should survive reruns
-- `data/intermediate/`: disposable working state used for validation and assembly
-- `data/out/`: final deliverables only; the runtime image and external integrations should read from here
+### Licensing
 
-Publish and runtime assumptions:
+- The project ships under MIT. Everything we distribute must be MIT-compatible: code, styles, icons, tiles, images.
+- GPL tools may run during the build if we only call their CLI and don't ship them in the tile server image. osmium-tool (GPL-3.0) in the generator image is the one case today.
+- Write styles and icons from scratch. Don't copy from OpenRailwayMap (GPL-3.0) or other GPL projects.
+- Every map, export, and doc screenshot shows "© OpenStreetMap contributors". OSM data is ODbL.
+- New third-party components go in `THIRD_PARTY_NOTICES.md`.
 
-- publish validation reads route GeoJSON from `data/intermediate/geojson/`
-- runtime bundling and local serving consume `data/out/lux-railway-map-overlay.mbtiles`
-- cache retention is intentional to avoid repeated Geofabrik downloads and Overpass calls; a cached Overpass response is always reused, and filtered PBFs in `data/intermediate/sources/` also skip downloads
+### Style
 
-## Key Conventions
+- Each overlay layer carries `metadata.toggle` tokens: a family (`tracks`, `routes`, `stops`, `platforms`, `infrastructure`, `crossings`, `areas`), plus a mode and a lifecycle state where they apply. The viewer builds its toggles from these tokens, and `tests/generator/test_style_contract.py` checks them. Add the tokens to any new layer.
+- `layout.visibility` sets the default. Tram, trackside infrastructure, and level crossings start hidden. Everything else starts visible. `docs/consumer-integration.md` lists the defaults, so update it when you change one.
+- Spillgebees.Blazor.Map 0.23 can't show a layer the style hides. The viewer greys those toggles out. When the library gains that ability, flip `CanRevealStyleHiddenLayers` in `viewer/Overlay/OverlayVisibility.cs`.
 
-- **MIT license**: no GPL dependencies
-- OSM data attribution: "© OpenStreetMap contributors" must appear on all maps and exports
-- Styles are original work, not copied from OpenRailwayMap (GPL-3.0) or other GPL projects
-- Map styling defined in `styles/style.json` (MapLibre Style Specification)
-- Vector tiles served by [Martin](https://maplibre.org/martin/) from MBTiles (generated by tippecanoe)
-- Blazor viewer uses the `Spillgebees.Blazor.Map` package (MapLibre-based; versions pinned centrally in `viewer/Directory.Packages.props`, .NET SDK pinned in `global.json`)
-- .NET 10, file-scoped namespaces, var everywhere, Allman braces
-- Shell scripts use bash with `set -euo pipefail`
+### Pipeline
+
+- Never cache a partial input. Geofabrik downloads go to a `.part` file and must match `Content-Length` and Geofabrik's MD5 before they replace the cached file. Overpass responses with a `remark`, or without an `elements` list, count as failures and move on to the next mirror.
+- Route extraction is strict. A run fails without routes unless someone passes `--allow-missing-routes`. The publish workflow also rejects empty route GeoJSON.
+- Defaults live in the CLI, not the Dockerfile: `--countries lu,be,de,fr`, and `--output-dir` from `OUTPUT_DIR` (`/data` in the image).
+- The generator image runs as 1000:1000 with WORKDIR `/tmp`. ogr2ogr writes node-cache files to the working directory, so keep it writable.
+
+### Images and releases
+
+- The tile server is Alpine `nginx-unprivileged` plus Martin's static musl binary. The build checks the binary against the SHA256 digest GitHub publishes for the release asset. It runs as 101:101 and must work with a read-only root filesystem and a `/tmp` tmpfs.
+- nginx serves the public API on 8080. Martin metrics are on 9090 at `/metrics` and must stay off 8080.
+- `publish-image.yml` tags each build `<year>.<month*100+day>.<run>` (for example `2026.1003.76`), plus `latest` and `sha-<commit>`. It pushes the chart with the same version. `Chart.yaml` keeps the placeholder `0.0.0`, and the chart refuses to render with it.
+
+### Dependencies
+
+- Pin everything: images by digest, actions by SHA with a `# vN` comment, tool versions in Dockerfile `ARG`s and workflow `env:` with a `# renovate:` comment. The shared preset (`local>Spillgebees/admin`) picks those comments up.
+- Python dependencies live in `pyproject.toml` and `uv.lock`. The .NET SDK is pinned in `global.json`, packages in `viewer/Directory.Packages.props`.
+
+### Code style
+
+- Python 3.14, formatted and linted by ruff, type-checked by basedpyright in standard mode.
+- C#: .NET 10, file-scoped namespaces, `var` everywhere, Allman braces, CSharpier with a 120-column width.
+- Shell: bash with `set -euo pipefail`, clean under ShellCheck.
+- Commits use gitmoji (`:bug:`, `:sparkles:`, `:memo:`, ...).
