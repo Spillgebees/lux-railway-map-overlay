@@ -21,8 +21,27 @@ This file is a practical notice summary for this repository and its standard bui
 ### Tippecanoe
 
 - Project: https://github.com/felt/tippecanoe
-- Usage here: generates and merges MBTiles in the data pipeline
+- Usage here: generates and merges MBTiles in the generator image
 - License: BSD 2-Clause
+
+### nginx
+
+- Project: https://nginx.org/
+- Usage here: reverse proxy in front of Martin in the tile image
+- License: BSD 2-Clause
+
+### osmium-tool
+
+- Project: https://github.com/osmcode/osmium-tool
+- Usage here: filters and merges OSM extracts in the generator image
+- License: GPL-3.0
+- Note: the generator calls osmium as a separate command-line program. It is not linked into project code and is not included in the tile image.
+
+### GDAL
+
+- Project: https://gdal.org/
+- Usage here: `ogr2ogr` converts OSM data to GeoJSON, shapefiles, and GeoPackage in the generator image
+- License: MIT
 
 ### Shapely
 
@@ -93,6 +112,6 @@ The generated database artifacts and tile outputs remain subject to OpenStreetMa
 
 ## Operational Notes
 
-- The repository intentionally avoids GPL dependencies in its primary code and tile-serving stack.
+- The repository avoids GPL dependencies in its own code and in the tile image. The generator image includes osmium-tool (GPL-3.0) as a standalone program.
 - Container base images and distribution packages may introduce additional transitive license notices. For production releases, generate an SBOM or equivalent dependency inventory for the exact images you publish.
 - Keep the OpenStreetMap attribution visible on maps, exports, and user-facing experiences that use the generated data.
