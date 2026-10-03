@@ -11,7 +11,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
@@ -20,8 +20,7 @@ from typing import Any
 _COPY_BUFFER_SIZE = 1 << 20
 
 USER_AGENT = (
-    "lux-railway-map-overlay "
-    "(+https://github.com/Spillgebees/lux-railway-map-overlay)"
+    "lux-railway-map-overlay (+https://github.com/Spillgebees/lux-railway-map-overlay)"
 )
 
 # socket timeout per blocking operation (connect or read), not for the whole body
@@ -58,7 +57,7 @@ def _ignore(_message: str) -> None:
     return None
 
 
-def check_required_tools(tool_names: list[str]) -> None:
+def check_required_tools(tool_names: Iterable[str]) -> None:
     missing_tools = [
         tool_name for tool_name in tool_names if shutil.which(tool_name) is None
     ]

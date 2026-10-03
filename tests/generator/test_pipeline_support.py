@@ -19,8 +19,8 @@ from generator.pipeline_support import (
     download_overpass,
     download_record_path,
     is_verified_download,
-    part_path_for,
     load_geojson,
+    part_path_for,
     require_existing_file,
     tippecanoe_layer_arg,
     validate_overpass_payload,
@@ -132,9 +132,7 @@ def pbf_response(body: bytes = PBF_BODY, **kwargs):
 
 
 def md5_response(checksum: str = PBF_MD5):
-    return lambda: FakeHttpResponse(
-        f"{checksum}  luxembourg-261002.osm.pbf\n".encode("utf-8")
-    )
+    return lambda: FakeHttpResponse(f"{checksum}  luxembourg-261002.osm.pbf\n".encode())
 
 
 def assert_no_download_artifacts(output_path) -> None:

@@ -25,7 +25,7 @@ class Console:
     use_color: bool
 
     @classmethod
-    def create(cls) -> "Console":
+    def create(cls) -> Console:
         return cls(use_color=sys.stdout.isatty())
 
     def _style(self, code: str, text: str) -> str:

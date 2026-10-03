@@ -4,19 +4,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from generator.route_naming import (
-    build_variant_signature,
-    iter_station_aliases,
-    normalize_text,
-    parse_name_endpoints,
-    parse_other_tags,
-    resolve_endpoints,
-)
-from generator.route_graph import (
-    build_station_indexes,
-    chain_ways,
-    resolve_station_matches,
-)
+from generator.normalization import normalize_geojson_file
 from generator.route_display import (
     assign_route_offset_slots,
     geometry_from_segments,
@@ -25,7 +13,16 @@ from generator.route_display import (
     resolve_display_color,
     resolve_display_text_color,
 )
-from generator.normalization import normalize_geojson_file
+from generator.route_graph import (
+    build_station_indexes,
+    chain_ways,
+    resolve_station_matches,
+)
+from generator.route_naming import (
+    build_variant_signature,
+    normalize_text,
+    resolve_endpoints,
+)
 
 
 @dataclass

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from generator.normalization import normalize_feature_collection
 
 
@@ -326,9 +328,5 @@ def test_normalize_feature_collection_rejects_unknown_layer() -> None:
     collection = {"type": "FeatureCollection", "features": []}
 
     # act / assert
-    try:
+    with pytest.raises(ValueError, match="rail_unknown"):
         normalize_feature_collection(collection, "rail_unknown")
-    except ValueError as error:
-        assert "rail_unknown" in str(error)
-    else:
-        raise AssertionError("expected ValueError")

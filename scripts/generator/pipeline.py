@@ -14,7 +14,6 @@ from generator.layer_specs import (
     STATION_TILE_LAYER_SPECS,
 )
 from generator.normalization import normalize_geojson_file
-from generator.platform_references import build_platform_reference_feature_collection
 from generator.pipeline_exports import (
     build_geopackage_command,
     export_vector_layers,
@@ -51,11 +50,12 @@ from generator.pipeline_tiles import (
     build_tippecanoe_command,
     cleanup_intermediate_tiles,
 )
+from generator.platform_references import build_platform_reference_feature_collection
 from generator.routes import write_routes_geojson
 
 
 class GeneratorPipeline:
-    REQUIRED_TOOLS = ["osmium", "ogr2ogr", "tippecanoe", "tile-join"]
+    REQUIRED_TOOLS = ("osmium", "ogr2ogr", "tippecanoe", "tile-join")
     VECTOR_TILE_PASSES = (
         (
             "Pass 1: Lines (track geometry at all zooms, no dropping)...",

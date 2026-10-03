@@ -9,9 +9,9 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black",
     "pre-commit",
     "pytest",
+    "ruff==0.16.10",
 ]
 
 [build-system]
@@ -26,5 +26,27 @@ module-root = "scripts"
 testpaths = ["tests"]
 pythonpath = ["scripts"]
 
-[tool.black]
-target-version = ["py314"]
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+src = ["scripts", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+    "PT",  # flake8-pytest-style
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    # the formatter owns line length; the remaining long lines are strings
+    "E501",
+]
+# route names use en dashes as separators (route_naming.build_variant_signature)
+allowed-confusables = ["–"]
