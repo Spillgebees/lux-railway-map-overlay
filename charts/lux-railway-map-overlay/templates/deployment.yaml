@@ -52,6 +52,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ include "lux-railway-map-overlay.metricsPort" . }}
+              protocol: TCP
+            {{- end }}
           startupProbe:
             httpGet:
               path: {{ .Values.probes.startup.path }}

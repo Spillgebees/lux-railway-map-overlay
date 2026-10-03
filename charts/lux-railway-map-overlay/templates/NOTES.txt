@@ -19,3 +19,14 @@ publicUrl is not set, so style.json uses the derived URL above. Set publicUrl if
 
 Get the service:
   kubectl get svc {{ include "lux-railway-map-overlay.fullname" . }} -n {{ .Release.Namespace }}
+{{- if .Values.metrics.enabled }}
+
+Prometheus metrics:
+  http://{{ include "lux-railway-map-overlay.fullname" . }}-metrics.{{ .Release.Namespace }}.svc:{{ .Values.metrics.service.port }}/metrics
+{{- if and .Values.networkPolicy.enabled (not .Values.metrics.networkPolicy.from) }}
+metrics.networkPolicy.from is empty, so the NetworkPolicy blocks all traffic to the metrics port.
+{{- end }}
+{{- if and .Values.metrics.serviceMonitor.enabled (not (include "lux-railway-map-overlay.serviceMonitorApi" .)) }}
+The cluster does not serve monitoring.coreos.com/v1, so no ServiceMonitor was created.
+{{- end }}
+{{- end }}

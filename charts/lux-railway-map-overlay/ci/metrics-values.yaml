@@ -1,0 +1,17 @@
+# Rendered and linted in CI: metrics Service, container port, and the
+# NetworkPolicy rule for a Prometheus in the monitoring namespace. CI does not
+# pass the monitoring.coreos.com/v1 API, so the ServiceMonitor is skipped.
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+  networkPolicy:
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
+          matchLabels:
+            app.kubernetes.io/name: prometheus

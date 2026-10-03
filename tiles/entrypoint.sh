@@ -202,7 +202,7 @@ main() {
     done
 
     # Start nginx, then supervise both processes as PID 1
-    echo "Starting nginx on port 8080..."
+    echo "Starting nginx on ports 8080 (tiles) and 9090 (metrics)..."
     nginx -g "daemon off;" &
     NGINX_PID=$!
 

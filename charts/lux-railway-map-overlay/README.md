@@ -73,10 +73,37 @@ To manage TLS secrets yourself, set `ingress.tls` and leave `ingress.certManager
 - The chart requires Kubernetes 1.25 or newer.
 - The pod runs as user and group `101`, with `runAsNonRoot`, a read-only root filesystem, no privilege escalation, all capabilities dropped, and the `RuntimeDefault` seccomp profile.
 - nginx needs a writable `/tmp` for its PID, temp files, tile cache, and the rewritten `style.json`. The chart mounts an `emptyDir` there with `tmpVolume.sizeLimit: 64Mi`. The nginx tile cache is capped at 32 MiB, so it fits with room to spare.
-- The container listens on port `8080`. The Service exposes it on port `80`.
+- The container listens on port `8080`. The Service exposes it on port `80`. The container also serves metrics on port `9090`, which the chart leaves unexposed unless `metrics.enabled` is set.
 - Startup, readiness, and liveness probes all call `/health`.
-- `networkPolicy.enabled` is `true`. The policy allows ingress on port `8080` from anywhere and blocks all egress. The server needs no outbound traffic.
+- `networkPolicy.enabled` is `true`. The policy allows ingress on port `8080` from anywhere and blocks all egress. The server needs no outbound traffic. Port `9090` accepts traffic only from the peers in `metrics.networkPolicy.from`.
 - The Deployment strategy is `RollingUpdate` without a data volume and `Recreate` with one, because a `ReadWriteOnce` volume such as Azure Disk, EBS, or a GCE persistent disk attaches to one node at a time. Set `deploymentStrategy.type` to override it.
+
+## Metrics
+
+The container serves Martin's Prometheus metrics at `/metrics` on port `9090`. The public port `8080` does not serve them. `metrics.enabled` adds a `metrics` container port and a ClusterIP Service named `<release>-lux-railway-map-overlay-metrics`. It is a separate Service so that a `LoadBalancer` or `NodePort` type on the main Service never exposes the metrics.
+
+With the Prometheus Operator installed, `metrics.serviceMonitor.enabled` adds a ServiceMonitor that scrapes that Service. The chart renders it only when the cluster serves the `monitoring.coreos.com/v1` API. With `helm template`, pass `--api-versions monitoring.coreos.com/v1`. Add the labels your Prometheus selects ServiceMonitors by to `metrics.serviceMonitor.labels`.
+
+The NetworkPolicy blocks port `9090` unless you list the scrapers in `metrics.networkPolicy.from`. The entries are NetworkPolicy peers:
+
+```yaml
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+  networkPolicy:
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
+          matchLabels:
+            app.kubernetes.io/name: prometheus
+```
+
+Without the NetworkPolicy (`networkPolicy.enabled: false`), any pod in the cluster can reach port `9090` on the pod IP, whether or not `metrics.enabled` is set.
 
 ## Scaling
 
