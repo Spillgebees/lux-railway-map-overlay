@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from generator.route_graph import (
+    _select_best_segments,
     build_luxembourg_station_names,
     build_station_indexes,
     build_station_match_index,
@@ -148,3 +149,32 @@ def test_chain_ways_handles_disconnected_components() -> None:
     # The returned segment(s) should contain coordinates from at least one component
     all_coords = [coord for seg in segments for coord in seg]
     assert [6.0, 49.0] in all_coords or [7.0, 50.0] in all_coords
+
+
+def test_select_best_segments_keeps_first_segment_without_station_matches() -> None:
+    # arrange
+    first = [[6.0, 49.0], [6.1, 49.1]]
+    second = [[7.0, 50.0], [7.1, 50.1], [7.2, 50.2]]
+
+    # act
+    selected = _select_best_segments([first, second], [], [[7.2, 50.2]])
+
+    # assert
+    assert selected == [first]
+
+
+def test_select_best_segments_prefers_longest_segment_spanning_both_stations() -> None:
+    # arrange
+    from_station = [[6.001, 49.001]]
+    to_station = [[6.201, 49.201]]
+    short_full_match = [[6.0, 49.0], [6.2, 49.2]]
+    long_full_match = [[6.0, 49.0], [6.1, 49.1], [6.15, 49.15], [6.2, 49.2]]
+    unrelated = [[8.0, 51.0], [8.1, 51.1], [8.2, 51.2], [8.3, 51.3], [8.4, 51.4]]
+
+    # act
+    selected = _select_best_segments(
+        [unrelated, short_full_match, long_full_match], from_station, to_station
+    )
+
+    # assert
+    assert selected == [long_full_match]
