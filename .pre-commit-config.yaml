@@ -10,6 +10,17 @@ repos:
     hooks:
       - id: actionlint-docker
 
+  # keep rev in step with the biome.json $schema version (CI reads it from there)
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.5.15
+    hooks:
+      - id: biome-check
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck
+
   - repo: local
     hooks:
       - id: dotnet-tool-restore
