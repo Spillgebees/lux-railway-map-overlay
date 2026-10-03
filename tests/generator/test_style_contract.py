@@ -61,6 +61,7 @@ def test_style_restores_key_visual_contract_for_old_layer_ids() -> None:
     layers = {layer["id"]: layer for layer in style["layers"]}
 
     # assert
+    assert layers["railway-line-rail"].get("layout", {}).get("visibility") != "none"
     assert layers["railway-line-rail"]["paint"]["line-color"] == "#1e293b"
     assert layers["railway-line-rail"]["paint"]["line-width"] == [
         "interpolate",
