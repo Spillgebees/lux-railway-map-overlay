@@ -38,7 +38,7 @@ If the server is reachable under another URL, set `PUBLIC_URL` so the style poin
 docker run --rm -p 8080:8080 -e PUBLIC_URL=https://tiles.example.com ghcr.io/spillgebees/lux-railway-map-overlay:latest
 ```
 
-Images are tagged `latest` and `sha-<commit>`. CI rebuilds them when the generator, styles, or tile server change on `main`, and once a month to pick up new OpenStreetMap edits.
+Each build is tagged with a release version such as `2026.1003.76` (year, month and day, run number), `latest`, and `sha-<commit>`. Pin the release version for reproducible deployments. CI rebuilds the image when the generator, styles, or tile server change on `main`, and once a month to pick up new OpenStreetMap edits.
 
 ## Generate the data yourself
 
@@ -90,7 +90,13 @@ The [consumer integration guide](docs/consumer-integration.md) has the source la
 
 - Docker: run the published image as shown in the quick start. The [self-hosting guide](docs/self-hosting.md) lists endpoints, environment variables, and cache headers.
 - Docker Compose: [`docker-compose.yml`](docker-compose.yml) builds the tile server from source and serves tiles from `./data`.
-- Kubernetes: the Helm chart in [`charts/lux-railway-map-overlay`](charts/lux-railway-map-overlay/README.md) deploys the same image.
+- Kubernetes: install the Helm chart from GHCR. Each chart version deploys the image with the same version.
+
+  ```bash
+  helm install railway-tiles oci://ghcr.io/spillgebees/charts/lux-railway-map-overlay --version <version>
+  ```
+
+  The [chart README](charts/lux-railway-map-overlay/README.md) covers values, TLS, and scaling.
 
 ## Development
 
