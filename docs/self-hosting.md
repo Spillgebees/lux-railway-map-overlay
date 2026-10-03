@@ -11,7 +11,15 @@ The tile server image runs two processes. Martin serves tiles, TileJSON, sprites
 - `bundle` builds the published image, `ghcr.io/spillgebees/lux-railway-map-overlay`, with the generated MBTiles baked in.
 - `runtime` is the image `docker compose up` builds. It contains no data. It reads the MBTiles from the `./data` mount.
 
-Published tags are `latest` for the newest build from `main` and `sha-<commit>` for a specific build. Pin a `sha-` tag if you need reproducible deployments.
+Each publish run pushes three tags:
+
+- a release version, `<year>.<month * 100 + day>.<run number>`, for example `2026.1003.76`. CI never overwrites it, so pin it for reproducible deployments.
+- `latest`, the newest build from `main`.
+- `sha-<commit>`, the commit the image was built from. A monthly data refresh rebuilds the same commit, so this tag can move to newer data.
+
+The image also carries a BuildKit SBOM and provenance attestation, and GitHub stores a signed build provenance attestation for it. Check the attestation with `gh attestation verify oci://ghcr.io/spillgebees/lux-railway-map-overlay:<version> --owner Spillgebees`.
+
+The Helm chart is published with the same version. See the [Helm chart README](../charts/lux-railway-map-overlay/README.md).
 
 ## Run the published image
 
