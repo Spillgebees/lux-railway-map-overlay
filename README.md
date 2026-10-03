@@ -55,17 +55,19 @@ The second command builds the tile server image, mounts `./data`, and serves it 
 
 The default run covers Luxembourg, Belgium, Germany, and France. The first run downloads more than 10 GB of extracts from Geofabrik, most of it Germany and France, and queries the Overpass API for route relations. Later runs reuse both.
 
-To build a smaller dataset, pass your own arguments. Include `--output-dir /data`, because custom arguments replace the defaults and the output would otherwise stay inside the container:
+To build a smaller dataset, pass your own arguments. Options you leave out keep their defaults, and the output still lands in `./data`:
 
 ```bash
-LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm generate --countries lu --output-dir /data
+LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm generate --countries lu
 ```
 
 | Option                   | Description                                                                                      |
 | ------------------------ | ------------------------------------------------------------------------------------------------ |
-| `--countries`            | Required. Comma-separated country codes: `lu`, `be`, `de`, `fr`.                                 |
-| `--output-dir`           | Root of the `cache/`, `intermediate/`, and `out/` directories. Defaults to `./data`.             |
+| `--countries`            | Comma-separated country codes: `lu`, `be`, `de`, `fr`. Defaults to all four.                     |
+| `--output-dir`           | Root of the `cache/`, `intermediate/`, and `out/` directories. Defaults to `$OUTPUT_DIR`, else `./data`. |
 | `--allow-missing-routes` | Write empty route layers if Overpass fails, instead of failing the run. For local exploration only. |
+
+The generator image sets `OUTPUT_DIR=/data`, which is where Compose mounts `./data`.
 
 Route extraction is strict by default, so an Overpass outage fails the run rather than producing a tileset without routes.
 

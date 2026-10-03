@@ -28,7 +28,7 @@ Then serve the result with `docker compose up` from the repository root.
 
 ## Output layout
 
-`--output-dir` (default `./data`) holds three directories with different lifetimes:
+`--output-dir` holds three directories with different lifetimes. It defaults to the `OUTPUT_DIR` environment variable, or `./data` when that is unset. The generator image sets `OUTPUT_DIR=/data`, the path Compose mounts `./data` on.
 
 | Directory       | Contents                                                                                                   | Lifetime                                       |
 | --------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
