@@ -1,15 +1,11 @@
-from __future__ import annotations
-
 import json
-import sys
 from pathlib import Path
 from xml.etree import ElementTree
 
-REPOSITORY_ROOT = Path(__file__).parents[2]
-sys.path.insert(0, str(REPOSITORY_ROOT / "scripts"))
-
 from generator import platform_references
 from generator.layer_specs import GEOJSON_LAYER_SPECS
+
+REPOSITORY_ROOT = Path(__file__).parents[2]
 
 ACTIVE_RAIL_TRACK_LAYER_IDS = {
     "railway-line-rail",

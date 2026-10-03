@@ -6,7 +6,7 @@ These notes describe the Python generator in `scripts/generator/`: how to run it
 
 The Docker route needs nothing but Docker. It is described in the [README](../README.md#generate-the-data-yourself).
 
-To run without Docker, install Python 3.14 or newer and put these tools on your `PATH`:
+To run without Docker, install [uv](https://docs.astral.sh/uv/) and put these tools on your `PATH`:
 
 | Tool                                                             | Used for                                                       |
 | ---------------------------------------------------------------- | -------------------------------------------------------------- |
@@ -17,12 +17,11 @@ To run without Docker, install Python 3.14 or newer and put these tools on your 
 The generator checks for `osmium`, `ogr2ogr`, `tippecanoe`, and `tile-join` at startup.
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
-cd scripts && ../.venv/bin/python -m generator --countries lu --output-dir ../data
+uv sync
+cd scripts && uv run python -m generator --countries lu --output-dir ../data
 ```
 
-Run it from `scripts/`. `ogr2ogr` writes temporary node cache files to the working directory.
+`uv sync` creates `.venv/` with Python 3.14 (uv downloads it if needed) and installs the versions pinned in `uv.lock`. Run the generator from `scripts/`. `ogr2ogr` writes temporary node cache files to the working directory.
 
 Then serve the result with `docker compose up` from the repository root.
 
@@ -155,19 +154,25 @@ tippecanoe runs three passes in parallel, each with its own dropping rules, and 
 Local checks:
 
 ```bash
-.venv/bin/black --check scripts tests
-.venv/bin/pytest
+uv run ruff format --check
+uv run ruff check
+uv run basedpyright
+uv run pytest
 dotnet tool restore && dotnet csharpier check viewer
 dotnet build viewer/RailwayViewer.slnx -warnaserror
 npx --package @maplibre/maplibre-gl-style-spec gl-style-validate styles/style.json
 helm lint --strict charts/lux-railway-map-overlay
 ```
 
-`.venv/bin/pre-commit install` runs Black, CSharpier, Biome, ShellCheck, and actionlint as Git hooks. The actionlint hook runs in Docker.
+`uv run pre-commit install` runs ruff, basedpyright, CSharpier, Biome, ShellCheck, and actionlint as Git hooks. The actionlint hook runs in Docker.
+
+Python dependencies live in `pyproject.toml`: runtime dependencies under `[project]`, tools in the `dev` dependency group. After changing either, run `uv lock` and commit `uv.lock`. The generator image installs from the same lockfile with `uv sync --frozen --no-dev`, so there is no separate requirements file to keep in sync. The image builds from the repository root, and `scripts/Dockerfile.dockerignore` limits the context to `pyproject.toml`, `uv.lock`, `scripts/generator/`, and `scripts/osmconf.ini`.
+
+Ruff runs the pycodestyle, pyflakes, isort, pyupgrade, bugbear, simplify, comprehensions, pytest-style, and Ruff-specific rules, minus E501 because the formatter handles line length. basedpyright checks `scripts/` and `tests/` in `standard` mode.
 
 Two workflows run in GitHub Actions:
 
-- `validate.yml` runs on every pull request and push to `main`. A `changes` job picks the checks that match the changed paths: actionlint, Black and pytest, the viewer build and CSharpier, MapLibre style validation, Biome, Helm lint and render with kubeconform, ShellCheck, Renovate config validation, and builds of the generator and tile server images (not pushed). The final `Validate` job sums up the results and is the one to require in branch protection. Nothing in it downloads extracts or calls Overpass.
+- `validate.yml` runs on every pull request and push to `main`. A `changes` job picks the checks that match the changed paths: actionlint, the Python checks (ruff, basedpyright, pytest), the viewer build and CSharpier, MapLibre style validation, Biome, Helm lint and render with kubeconform, ShellCheck, Renovate config validation, and builds of the generator and tile server images (not pushed). The final `Validate` job sums up the results and is the one to require in branch protection. Nothing in it downloads extracts or calls Overpass.
 - `publish-image.yml` runs on pushes to `main` that touch the generator, styles, tile server, Helm chart, or Compose file, on the 1st of each month, and on manual dispatch. Runs queue behind each other and are never cancelled. It has three jobs:
   - `image` computes the release version, generates the full dataset, fails if either route GeoJSON file is empty, and builds the `bundle` target of `tiles/Dockerfile` with the MBTiles baked in. It pushes the image to GHCR as `<version>`, `latest`, and `sha-<commit>`, with a BuildKit SBOM and provenance, and creates a GitHub build provenance attestation. It caches `data/cache/overpass/` and `data/intermediate/sources/` per calendar month. A manual run with `fresh` enabled skips that cache. Both image builds use the GitHub Actions BuildKit cache, so tippecanoe and the glyphs are not recompiled on every run.
   - `chart` lints the Helm chart, packages it with `version` and `appVersion` set to the release version, and pushes it to `oci://ghcr.io/spillgebees/charts`. The `Chart.yaml` in the repository keeps `0.0.0`, and CI does not commit the version back.

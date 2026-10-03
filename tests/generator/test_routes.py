@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 
 from generator.route_naming import (

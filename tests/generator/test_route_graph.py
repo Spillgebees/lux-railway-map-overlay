@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from generator.route_graph import (
     _select_best_segments,
     build_luxembourg_station_names,

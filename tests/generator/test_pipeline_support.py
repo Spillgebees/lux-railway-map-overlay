@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 import hashlib
 import http.client
 import io
 import json
 import urllib.error
 import urllib.request
+from email.message import Message
 
 import pytest
 
@@ -19,8 +18,8 @@ from generator.pipeline_support import (
     download_overpass,
     download_record_path,
     is_verified_download,
-    part_path_for,
     load_geojson,
+    part_path_for,
     require_existing_file,
     tippecanoe_layer_arg,
     validate_overpass_payload,
@@ -132,9 +131,7 @@ def pbf_response(body: bytes = PBF_BODY, **kwargs):
 
 
 def md5_response(checksum: str = PBF_MD5):
-    return lambda: FakeHttpResponse(
-        f"{checksum}  luxembourg-261002.osm.pbf\n".encode("utf-8")
-    )
+    return lambda: FakeHttpResponse(f"{checksum}  luxembourg-261002.osm.pbf\n".encode())
 
 
 def assert_no_download_artifacts(output_path) -> None:
@@ -165,7 +162,7 @@ def test_download_file_verifies_and_moves_into_place(tmp_path) -> None:
     assert opener.urls() == [PBF_URL, f"{DATED_PBF_URL}.md5"]
     assert all(
         "github.com/Spillgebees/lux-railway-map-overlay"
-        in request.get_header("User-agent")
+        in request.get_header("User-agent", "")
         for request in opener.requests
     )
 
@@ -252,7 +249,9 @@ def test_download_file_retries_transient_errors_then_succeeds(tmp_path) -> None:
     opener = FakeOpener(
         {
             PBF_URL: [
-                urllib.error.HTTPError(PBF_URL, 503, "Service Unavailable", {}, None),
+                urllib.error.HTTPError(
+                    PBF_URL, 503, "Service Unavailable", Message(), None
+                ),
                 TimeoutError("timed out"),
                 pbf_response(fail_after=10),
                 pbf_response(),
@@ -282,7 +281,7 @@ def test_download_file_does_not_retry_client_errors(tmp_path) -> None:
     # arrange
     output_path = tmp_path / "luxembourg-latest.osm.pbf"
     opener = FakeOpener(
-        {PBF_URL: [urllib.error.HTTPError(PBF_URL, 404, "Not Found", {}, None)]}
+        {PBF_URL: [urllib.error.HTTPError(PBF_URL, 404, "Not Found", Message(), None)]}
     )
     sleeps: list[float] = []
 
@@ -434,7 +433,9 @@ def test_download_overpass_falls_through_on_remark_to_next_mirror(tmp_path) -> N
         TimeoutError("The read operation timed out"),
         ConnectionResetError("connection reset by peer"),
         http.client.IncompleteRead(b"{", 100),
-        urllib.error.HTTPError(OVERPASS_URLS[0], 504, "Gateway Timeout", {}, None),
+        urllib.error.HTTPError(
+            OVERPASS_URLS[0], 504, "Gateway Timeout", Message(), None
+        ),
     ],
 )
 def test_download_overpass_moves_to_next_mirror_after_error(tmp_path, error) -> None:

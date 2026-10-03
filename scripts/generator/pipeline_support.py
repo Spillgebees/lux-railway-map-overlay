@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import hashlib
 import http.client
 import json
@@ -11,7 +9,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
@@ -20,8 +18,7 @@ from typing import Any
 _COPY_BUFFER_SIZE = 1 << 20
 
 USER_AGENT = (
-    "lux-railway-map-overlay "
-    "(+https://github.com/Spillgebees/lux-railway-map-overlay)"
+    "lux-railway-map-overlay (+https://github.com/Spillgebees/lux-railway-map-overlay)"
 )
 
 # socket timeout per blocking operation (connect or read), not for the whole body
@@ -58,7 +55,7 @@ def _ignore(_message: str) -> None:
     return None
 
 
-def check_required_tools(tool_names: list[str]) -> None:
+def check_required_tools(tool_names: Iterable[str]) -> None:
     missing_tools = [
         tool_name for tool_name in tool_names if shutil.which(tool_name) is None
     ]
@@ -66,7 +63,7 @@ def check_required_tools(tool_names: list[str]) -> None:
         raise PipelineError(f"Missing required tool(s): {', '.join(missing_tools)}")
 
 
-def load_geojson(path: Path) -> dict[str, object]:
+def load_geojson(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"type": "FeatureCollection", "features": []}
     return json.loads(path.read_text(encoding="utf-8"))

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 import unicodedata
 
@@ -16,14 +14,16 @@ def normalize_text(value: str) -> str:
     return " ".join(cleaned_value.split())
 
 
+def _unescape_hstore(text: str) -> str:
+    return text.replace(r"\"", '"').replace(r"\\", "\\")
+
+
 def parse_other_tags(raw_other_tags: str) -> dict[str, str]:
     if not raw_other_tags:
         return {}
 
     return {
-        key.replace(r"\"", '"')
-        .replace(r"\\", "\\"): value.replace(r"\"", '"')
-        .replace(r"\\", "\\")
+        _unescape_hstore(key): _unescape_hstore(value)
         for key, value in re.findall(
             r'"((?:[^"\\]|\\.)*)"=>"((?:[^"\\]|\\.)*)"', raw_other_tags
         )

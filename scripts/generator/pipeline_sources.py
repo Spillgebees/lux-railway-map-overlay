@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import http.client
 import os
 import shutil
 import urllib.parse
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -83,7 +81,7 @@ def build_time_filter_command(input_path: Path, output_path: Path) -> list[str]:
 
 
 def download_sources(
-    countries: list[str],
+    countries: Sequence[str],
     sources_dir: Path,
     country_urls: dict[str, str],
     country_names: dict[str, str],
@@ -147,7 +145,7 @@ def download_sources(
 
 
 def filter_sources(
-    countries: list[str],
+    countries: Sequence[str],
     source_cache_dir: Path,
     filtered_sources_dir: Path,
     country_urls: dict[str, str],
@@ -203,7 +201,7 @@ def filter_sources(
 
 
 def merge_sources(
-    countries: list[str],
+    countries: Sequence[str],
     filtered_sources_dir: Path,
     merged_path: Path,
     country_names: dict[str, str],

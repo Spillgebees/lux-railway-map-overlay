@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 import re
+from typing import Any
 
 # squared distance threshold (~50m at Luxembourg latitude) for treating
 # a stop-position label as a duplicate of a nearby platform-area label
@@ -8,17 +7,17 @@ _PLATFORM_PROXIMITY_THRESHOLD_SQ_DEG = 0.0005**2
 
 
 def build_platform_reference_feature_collection(
-    platform_data: dict[str, object],
-    station_data: dict[str, object],
-) -> tuple[list[dict[str, object]], int, int]:
+    platform_data: dict[str, Any],
+    station_data: dict[str, Any],
+) -> tuple[list[dict[str, Any]], int, int]:
     """Combine polygon platform labels with stop-position fallbacks.
 
     OSM data is inconsistent across operators: some stations encode usable platform
     refs on platform areas, others only on stop positions. This collector prefers
     platform-area labels and only keeps stop positions that add missing information.
     """
-    platform_features: list[dict[str, object]] = []
-    stop_position_features: list[dict[str, object]] = []
+    platform_features: list[dict[str, Any]] = []
+    stop_position_features: list[dict[str, Any]] = []
 
     for feature in platform_data.get("features", []):
         platform_ref_feature = build_platform_reference_feature(
@@ -54,11 +53,11 @@ def build_platform_reference_feature_collection(
 
 
 def build_platform_reference_feature(
-    feature: dict[str, object],
+    feature: dict[str, Any],
     *,
     source_layer: str,
     require_stop_position: bool,
-) -> dict[str, object] | None:
+) -> dict[str, Any] | None:
     """Extract the best available platform label from one raw OSM feature."""
     properties = feature.get("properties")
     geometry = feature.get("geometry")
@@ -152,8 +151,8 @@ def build_platform_reference_feature(
 
 
 def point_geometry_for_feature(
-    geometry: dict[str, object],
-) -> dict[str, object] | None:
+    geometry: dict[str, Any],
+) -> dict[str, Any] | None:
     """Collapse arbitrary feature geometry to a representative label point."""
     geometry_type = geometry.get("type")
     coordinates = geometry.get("coordinates")
@@ -178,8 +177,8 @@ def point_geometry_for_feature(
 
 
 def has_matching_platform_reference(
-    platform_features: list[dict[str, object]],
-    candidate_feature: dict[str, object],
+    platform_features: list[dict[str, Any]],
+    candidate_feature: dict[str, Any],
 ) -> bool:
     """Treat a stop-position label as duplicate when it is both nearby and names the
     same platform as an already accepted polygon-derived label.

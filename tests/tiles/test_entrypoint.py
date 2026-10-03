@@ -4,8 +4,6 @@ The tests source the entrypoint in bash and call its functions, so they run
 without Martin or nginx. The supervision tests use sh and sleep as stand-ins.
 """
 
-from __future__ import annotations
-
 import json
 import os
 import shutil

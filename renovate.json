@@ -13,6 +13,16 @@
 			"matchDatasources": ["docker"],
 			"matchPackageNames": ["nginxinc/nginx-unprivileged"],
 			"allowedVersions": "/^\\d+\\.\\d*[02468]\\.\\d+-alpine-slim$/"
+		},
+		{
+			"description": "uv is pinned in the generator Dockerfile and in validate.yml; bump both together.",
+			"matchPackageNames": ["astral-sh/uv", "ghcr.io/astral-sh/uv"],
+			"groupName": "uv"
+		},
+		{
+			"description": "ruff is pinned in the uv dev group and in the pre-commit hook; bump both together.",
+			"matchPackageNames": ["ruff", "astral-sh/ruff-pre-commit"],
+			"groupName": "ruff"
 		}
 	]
 }

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from generator.pipeline_exports import (
     build_geopackage_command,
     export_vector_layers,

@@ -117,19 +117,20 @@ cd viewer && dotnet run --project RailwayViewer.csproj
 
 Then open the URL that `dotnet run` prints. The viewer reads the tile server URL from `viewer/wwwroot/appsettings.json` and uses the OpenFreeMap Positron basemap.
 
-To run the checks CI runs:
+To run the checks CI runs, install [uv](https://docs.astral.sh/uv/) and run:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+uv sync
 dotnet tool restore
-.venv/bin/black --check scripts tests
-.venv/bin/pytest
+uv run ruff format --check
+uv run ruff check
+uv run basedpyright
+uv run pytest
 dotnet csharpier check viewer
 dotnet build viewer/RailwayViewer.slnx -warnaserror
 ```
 
-CI also validates the style, the Helm chart, shell scripts, and JSON and CSS formatting; the [developer pipeline notes](docs/developer-pipeline.md#checks-and-ci) list every check. `.venv/bin/pre-commit install` sets up the formatting and lint checks as Git hooks, including Biome, ShellCheck, and actionlint. `.vscode/tasks.json` has tasks for generating data, starting the tile server, running the viewer, and running the checks.
+CI also validates the style, the Helm chart, shell scripts, and JSON and CSS formatting; the [developer pipeline notes](docs/developer-pipeline.md#checks-and-ci) list every check. `uv run pre-commit install` sets up the formatting, lint, and type checks as Git hooks, including Biome, ShellCheck, and actionlint. `.vscode/tasks.json` has tasks for generating data, starting the tile server, running the viewer, and running the checks.
 
 The [developer pipeline notes](docs/developer-pipeline.md) describe the pipeline stages, route extraction heuristics, and the CI workflows.
 

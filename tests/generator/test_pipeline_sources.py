@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import hashlib
 import json
 import urllib.error
@@ -7,11 +5,6 @@ from pathlib import Path
 
 import pytest
 
-from generator.pipeline_support import (
-    PipelineError,
-    download_record_path,
-    part_path_for,
-)
 from generator.pipeline_sources import (
     build_filter_command,
     build_merge_command,
@@ -22,6 +15,11 @@ from generator.pipeline_sources import (
     merge_sources,
     source_download_path,
     source_filename,
+)
+from generator.pipeline_support import (
+    PipelineError,
+    download_record_path,
+    part_path_for,
 )
 
 

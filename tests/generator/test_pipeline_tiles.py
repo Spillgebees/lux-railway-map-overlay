@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from generator.pipeline_tiles import (
     build_tile_artifacts,
     build_tile_join_command,
