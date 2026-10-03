@@ -124,6 +124,37 @@ probes:
 networkPolicy:
   enabled: true
 
+# Prometheus metrics from Martin. The container always serves them at /metrics
+# on port 9090, which is separate from the public port 8080. Enabling this adds
+# a "metrics" container port and a ClusterIP Service named <fullname>-metrics.
+metrics:
+  enabled: false
+  service:
+    port: 9090
+    annotations: {}
+  # Rendered only when metrics.enabled is true and the cluster serves the
+  # monitoring.coreos.com/v1 API (Prometheus Operator).
+  serviceMonitor:
+    enabled: false
+    # Empty uses the Prometheus default.
+    interval: 30s
+    scrapeTimeout: ""
+    labels: {}
+    relabelings: []
+    metricRelabelings: []
+  # With networkPolicy.enabled, only these NetworkPolicy peers may reach port
+  # 9090. Empty blocks all metrics traffic. Example for a Prometheus in the
+  # monitoring namespace:
+  #   from:
+  #     - namespaceSelector:
+  #         matchLabels:
+  #           kubernetes.io/metadata.name: monitoring
+  #       podSelector:
+  #         matchLabels:
+  #           app.kubernetes.io/name: prometheus
+  networkPolicy:
+    from: []
+
 # With replicaCount 1 and minAvailable 1, the budget blocks node drains.
 podDisruptionBudget:
   enabled: false

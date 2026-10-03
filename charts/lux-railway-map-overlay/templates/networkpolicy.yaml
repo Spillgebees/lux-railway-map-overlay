@@ -16,5 +16,12 @@ spec:
     - ports:
         - protocol: TCP
           port: {{ .Values.service.targetPort }}
+    {{- if and .Values.metrics.enabled .Values.metrics.networkPolicy.from }}
+    - from:
+        {{- toYaml .Values.metrics.networkPolicy.from | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: {{ include "lux-railway-map-overlay.metricsPort" . }}
+    {{- end }}
   egress: []
 {{- end }}

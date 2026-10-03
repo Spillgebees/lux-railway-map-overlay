@@ -92,3 +92,24 @@ RollingUpdate
 http://localhost:3000
 {{- end -}}
 {{- end -}}
+
+{{/*
+Port of the nginx metrics server, fixed in tiles/nginx.conf.
+*/}}
+{{- define "lux-railway-map-overlay.metricsPort" -}}
+9090
+{{- end -}}
+
+{{- define "lux-railway-map-overlay.metricsSelectorLabels" -}}
+{{ include "lux-railway-map-overlay.selectorLabels" . }}
+app.kubernetes.io/component: metrics
+{{- end -}}
+
+{{/*
+"true" when the cluster serves the Prometheus Operator ServiceMonitor API.
+*/}}
+{{- define "lux-railway-map-overlay.serviceMonitorApi" -}}
+{{- if or (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor") (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") -}}
+true
+{{- end -}}
+{{- end -}}

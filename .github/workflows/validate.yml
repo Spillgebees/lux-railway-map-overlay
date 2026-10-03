@@ -59,6 +59,7 @@ jobs:
             python:
               - 'scripts/**'
               - 'tests/**'
+              - 'tiles/entrypoint.sh'
               # files the style contract tests read
               - 'styles/**'
               - 'docs/**'

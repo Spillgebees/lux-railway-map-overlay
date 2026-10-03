@@ -4,7 +4,7 @@ This guide covers running the tile server: the container image, its configuratio
 
 ## What runs in the container
 
-The tile server image runs two processes. Martin serves tiles, TileJSON, sprites, and health on `127.0.0.1:3001`. nginx listens on port `8080`, serves the style and glyphs itself, and proxies everything else to Martin. The container runs as the unprivileged user `101:101`. The image is based on `nginxinc/nginx-unprivileged` (Alpine) and adds Martin's statically linked musl release binary.
+The tile server image runs two processes. Martin serves tiles, TileJSON, sprites, and health on `127.0.0.1:3001`. nginx listens on port `8080`, serves the style and glyphs itself, and proxies everything else to Martin. It also listens on port `9090` for [metrics](#metrics). The container runs as the unprivileged user `101:101`. If either process exits, the entrypoint stops the other one and the container exits with a non-zero status, so Docker or Kubernetes can restart it. On `SIGTERM` or `SIGINT` it stops both processes and exits with status 0. The image is based on `nginxinc/nginx-unprivileged` (Alpine) and adds Martin's statically linked musl release binary.
 
 `tiles/Dockerfile` has two targets:
 
@@ -53,7 +53,7 @@ The container exits with an error if none exists.
 | `PUBLIC_URL`   | `http://localhost:3000` | External base URL. The entrypoint replaces `http://localhost:3000` in `style.json` with this value at startup. |
 | `MBTILES_PATH` | unset                   | Path to the MBTiles file. Overrides the lookup order above.                                                  |
 
-Set `PUBLIC_URL` to the URL clients use to reach the server. Otherwise `style.json` points the source, sprite, and glyph URLs at `localhost`. A trailing slash is removed.
+Set `PUBLIC_URL` to the URL clients use to reach the server. Otherwise `style.json` points the source, sprite, and glyph URLs at `localhost`. The value must start with `http://` or `https://` and may include a path, but no query string, fragment, or whitespace. The entrypoint strips trailing slashes and exits with an error if the value is invalid.
 
 With Docker Compose, pass it on the command line or put it in a `.env` file next to `docker-compose.yml`:
 
@@ -63,23 +63,39 @@ PUBLIC_URL=https://tiles.example.com docker compose up
 
 ## Endpoints
 
-| Endpoint                               | Description                                          |
-| -------------------------------------- | ---------------------------------------------------- |
-| `/style.json`                          | MapLibre style with URLs rewritten to `PUBLIC_URL`   |
-| `/lux-railway-map-overlay`             | TileJSON, the URL to use as a vector source          |
-| `/lux-railway-map-overlay/{z}/{x}/{y}` | Vector tiles, up to zoom 14                          |
-| `/fonts/{fontstack}/{range}.pbf`       | Glyph PBFs                                           |
-| `/sprite/symbols`                      | Sprite built from `styles/symbols/`                  |
-| `/catalog`                             | Martin tile catalog                                  |
-| `/health`                              | Health check                                         |
-| `/_/metrics`                           | Prometheus metrics from Martin                       |
+Port `8080` serves:
+
+| Endpoint                               | Description                                        |
+| -------------------------------------- | -------------------------------------------------- |
+| `/style.json`                          | MapLibre style with URLs rewritten to `PUBLIC_URL` |
+| `/lux-railway-map-overlay`             | TileJSON, the URL to use as a vector source        |
+| `/lux-railway-map-overlay/{z}/{x}/{y}` | Vector tiles, up to zoom 14                        |
+| `/fonts/{fontstack}/{range}.pbf`       | Glyph PBFs                                         |
+| `/sprite/symbols`                      | Sprite built from `styles/symbols/`                |
+| `/catalog`                             | Martin tile catalog                                |
+| `/health`                              | Health check                                       |
+
+Paths under `/_/`, Martin's internal endpoints, return 404 on this port.
+
+Port `9090` serves only `/metrics`. Every other path returns 404.
+
+## Metrics
+
+`/metrics` on port `9090` returns Martin's Prometheus metrics, such as request counts and durations per endpoint. nginx proxies it to Martin's `/_/metrics`. The port is separate so that publishing `8080` does not expose the metrics. Keep `9090` off the internet, and publish it only to your scraper:
+
+```bash
+docker run --rm -p 3000:8080 -p 127.0.0.1:9090:9090 ghcr.io/spillgebees/lux-railway-map-overlay:latest
+curl http://127.0.0.1:9090/metrics
+```
+
+The Helm chart can add a metrics Service, a ServiceMonitor, and a NetworkPolicy rule for the port. See [Metrics in the chart README](../charts/lux-railway-map-overlay/README.md#metrics).
 
 ## Caching
 
 nginx sets these `Cache-Control` headers:
 
 - Tiles, sprites, and glyphs: `public, max-age=3600`
-- `/style.json`, TileJSON, `/catalog`, `/health`, `/_/metrics`, and anything else proxied to Martin: `no-store`
+- `/style.json`, TileJSON, `/catalog`, `/health`, `/metrics`, and anything else proxied to Martin: `no-store`
 
 Tile URLs are not versioned, which is why the browser cache lifetime is one hour. nginx also keeps its own tile cache of up to 32 MB in `/tmp/nginx/proxy_cache` and reports hits in the `X-Cache-Status` response header.
 

@@ -93,7 +93,9 @@ COPY --chmod=755 --chown=101:101 tiles/entrypoint.sh /entrypoint.sh
 
 USER 101:101
 
-EXPOSE 8080
+# 8080 serves tiles and styles. 9090 serves Prometheus metrics at /metrics
+# and should stay internal.
+EXPOSE 8080 9090
 
 # The nginx base image uses SIGQUIT; entrypoint.sh handles SIGTERM/SIGINT.
 STOPSIGNAL SIGTERM

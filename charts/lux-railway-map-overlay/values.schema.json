@@ -12,6 +12,11 @@
 			"type": "object",
 			"additionalProperties": true
 		},
+		"duration": {
+			"description": "Prometheus duration such as 30s or 1m30s. Empty uses the Prometheus default.",
+			"type": "string",
+			"pattern": "^(([0-9]+(ms|s|m|h|d|w|y))+)?$"
+		},
 		"probe": {
 			"type": "object",
 			"additionalProperties": false,
@@ -148,9 +153,9 @@
 			}
 		},
 		"publicUrl": {
-			"description": "External base URL. Empty derives it from the ingress.",
+			"description": "External base URL, http:// or https:// with an optional path and no query string or fragment. Empty derives it from the ingress.",
 			"type": "string",
-			"pattern": "^(https?://.+)?$"
+			"pattern": "^(https?://[^/?#\\s]+(/[^?#\\s]*)?)?$"
 		},
 		"env": {
 			"description": "Extra environment variables, by name.",
@@ -218,6 +223,53 @@
 			"additionalProperties": false,
 			"properties": {
 				"enabled": { "type": "boolean" }
+			}
+		},
+		"metrics": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"enabled": { "type": "boolean" },
+				"service": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+						"annotations": { "$ref": "#/definitions/stringMap" }
+					}
+				},
+				"serviceMonitor": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"enabled": {
+							"description": "Requires metrics.enabled. Rendered only when the cluster serves monitoring.coreos.com/v1.",
+							"type": "boolean"
+						},
+						"interval": { "$ref": "#/definitions/duration" },
+						"scrapeTimeout": { "$ref": "#/definitions/duration" },
+						"labels": { "$ref": "#/definitions/stringMap" },
+						"relabelings": {
+							"type": "array",
+							"items": { "$ref": "#/definitions/kubernetesObject" }
+						},
+						"metricRelabelings": {
+							"type": "array",
+							"items": { "$ref": "#/definitions/kubernetesObject" }
+						}
+					}
+				},
+				"networkPolicy": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"from": {
+							"description": "NetworkPolicy peers allowed to reach the metrics port. Empty allows none.",
+							"type": "array",
+							"items": { "$ref": "#/definitions/kubernetesObject" }
+						}
+					}
+				}
 			}
 		},
 		"podDisruptionBudget": {
