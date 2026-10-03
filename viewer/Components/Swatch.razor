@@ -1,0 +1,28 @@
+@using System.Globalization
+@using RailwayViewer.Overlay
+
+@if (Value is null)
+{
+    <span class="swatch" aria-hidden="true"></span>
+}
+else
+{
+    <span class="swatch"
+          data-kind="@Value.Kind.ToString().ToLowerInvariant()"
+          data-dashed="@(Value.Dashed ? "true" : null)"
+          style="@BuildStyle(Value)"
+          aria-hidden="true"></span>
+}
+
+@code {
+    /// <summary>Legend sample derived from the layer paint; renders an empty slot when null.</summary>
+    [Parameter]
+    public LegendSwatch? Value { get; set; }
+
+    private static string BuildStyle(LegendSwatch swatch)
+    {
+        var opacity = swatch.Opacity.ToString("0.##", CultureInfo.InvariantCulture);
+        var stroke = swatch.StrokeColor is null ? string.Empty : $"--swatch-stroke:{swatch.StrokeColor};";
+        return $"--swatch-color:{swatch.Color};--swatch-opacity:{opacity};{stroke}";
+    }
+}

@@ -4,46 +4,24 @@
 @inject IConfiguration Configuration
 @inject HttpClient Http
 
-<PageTitle>Railway Tile Viewer</PageTitle>
+<PageTitle>Luxembourg railway overlay</PageTitle>
 
-<div class="viewer-shell">
-    <SgbMap
-        Center="@(new Coordinate(49.61, 6.13))"
-        Zoom="8"
-        Styles="@_styles"
-        ComposedGlyphsUrl="@_composedGlyphsUrl"
-        Display="@_display"
-        Height="100%" />
+<div class="viewer">
+    <div class="viewer-map">
+        <SgbMap Center="@(new Coordinate(49.61, 6.13))"
+                Zoom="8"
+                Styles="@_styles"
+                ComposedGlyphsUrl="@_composedGlyphsUrl"
+                Display="@_display"
+                Height="100%">
+            <MapControls>
+                <NavigationMapControl />
+                <ScaleMapControl />
+            </MapControls>
+        </SgbMap>
+    </div>
 
-    <aside class="filter-showcase" aria-label="Rail layer filtering showcase">
-        <div class="panel-kicker">Normalized rail schema</div>
-        <h1>Filter by family, mode, and lifecycle</h1>
-
-        @if (_loadError is not null)
-        {
-            <p role="alert">@_loadError</p>
-        }
-
-        @foreach (var group in _groups)
-        {
-            <section class="filter-section" aria-labelledby="@($"{group.Id}-heading")">
-                <h2 id="@($"{group.Id}-heading")">@group.Title</h2>
-                <div class="toggle-grid compact">
-                    @foreach (var toggle in group.Toggles)
-                    {
-                        <label class="toggle-chip" style="--accent:@(toggle.Swatch?.Color ?? "#64748b")">
-                            <input
-                                type="checkbox"
-                                checked="@_display.IsOn(toggle.Token)"
-                                disabled="@(!OverlayVisibility.IsAvailable(toggle))"
-                                @onchange="@(args => _display.SetOn(toggle.Token, args.Value is true))" />
-                            <span>@toggle.Label</span>
-                        </label>
-                    }
-                </div>
-            </section>
-        }
-    </aside>
+    <LayerPanel Groups="@_groups" Display="@_display" Error="@_loadError" />
 </div>
 
 @code {
@@ -71,7 +49,7 @@
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException)
         {
-            _loadError = $"Could not load {styleUrl}: {exception.Message}";
+            _loadError = $"Could not load the layer list from {styleUrl}.";
         }
     }
 }

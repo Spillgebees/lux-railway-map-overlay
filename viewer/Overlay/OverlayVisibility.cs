@@ -26,6 +26,27 @@ public static class OverlayVisibility
     public static int UnreachableLayerCount(LayerToggle toggle) =>
         CanRevealStyleHiddenLayers ? 0 : toggle.Layers.Count(layer => !layer.VisibleByDefault);
 
+    /// <summary>Tokens of toggles that are disabled because none of their layers can be shown.</summary>
+    public static IReadOnlySet<string> UnavailableTokens(IEnumerable<ToggleGroup> groups) =>
+        groups
+            .SelectMany(group => group.Toggles)
+            .Where(toggle => !IsAvailable(toggle))
+            .Select(toggle => toggle.Token)
+            .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Whether most of an available toggle's layers stay hidden for reasons the panel doesn't already
+    /// show. Layers that also carry a disabled token (e.g. tram construction under "Construction")
+    /// are explained by that disabled toggle and don't count.
+    /// </summary>
+    public static bool IsMostlyUnreachable(LayerToggle toggle, IReadOnlySet<string> unavailableTokens)
+    {
+        var unexplained = toggle.Layers.Count(layer =>
+            !CanRevealStyleHiddenLayers && !layer.VisibleByDefault && !layer.Tokens.Any(unavailableTokens.Contains)
+        );
+        return unexplained * 2 > toggle.Layers.Count;
+    }
+
     /// <summary>
     /// Initial state mirrors style.json: a toggle starts on when the style draws at least one of its
     /// layers, so the panel never shows a toggle as on while none of its layers is drawn.

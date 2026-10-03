@@ -9,8 +9,8 @@ public sealed record LayerToggle(string Token, string Label, LegendSwatch? Swatc
     public IEnumerable<string> LayerIds => Layers.Select(layer => layer.Id);
 }
 
-/// <summary>A style layer and whether style.json ships it visible.</summary>
-public sealed record StyleLayerRef(string Id, bool VisibleByDefault);
+/// <summary>A style layer, whether style.json ships it visible, and all of its toggle tokens.</summary>
+public sealed record StyleLayerRef(string Id, bool VisibleByDefault, IReadOnlyList<string> Tokens);
 
 public enum SwatchKind
 {

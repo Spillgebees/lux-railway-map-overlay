@@ -1,0 +1,142 @@
+@using RailwayViewer.Overlay
+
+<section class="panel" data-open="@(_isOpen ? "true" : "false")" aria-labelledby="panel-title">
+    <header class="panel-header">
+        <div class="panel-heading">
+            <h1 id="panel-title" class="panel-title">Luxembourg railway overlay</h1>
+            <p class="panel-summary">
+                OpenStreetMap railway data as vector tiles, drawn over a Positron basemap.
+            </p>
+        </div>
+        <button type="button"
+                class="icon-button panel-toggle"
+                aria-expanded="@(_isOpen ? "true" : "false")"
+                aria-controls="panel-body"
+                aria-label="@(_isOpen ? "Hide layer controls" : "Show layer controls")"
+                @onclick="TogglePanel">
+            <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">
+                <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.75"
+                      stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+    </header>
+
+    <div id="panel-body" class="panel-body" hidden="@(!_isOpen)">
+        @if (Error is not null)
+        {
+            <p class="panel-message" role="alert">@Error</p>
+        }
+        else if (Groups.Count == 0)
+        {
+            <p class="panel-message" role="status">Loading layers from style.json…</p>
+        }
+
+        @foreach (var group in Groups)
+        {
+            var headingId = $"group-{group.Id}";
+            <section class="group" aria-labelledby="@headingId">
+                <div class="group-header">
+                    <h2 id="@headingId" class="group-title">@group.Title</h2>
+                    <div class="group-actions">
+                        <button type="button"
+                                class="text-button"
+                                disabled="@AllMatch(group, on: true)"
+                                aria-label="@($"Show all {group.Title.ToLowerInvariant()}")"
+                                @onclick="@(() => SetGroup(group, on: true))">
+                            Show all
+                        </button>
+                        <button type="button"
+                                class="text-button"
+                                disabled="@AllMatch(group, on: false)"
+                                aria-label="@($"Hide all {group.Title.ToLowerInvariant()}")"
+                                @onclick="@(() => SetGroup(group, on: false))">
+                            Hide all
+                        </button>
+                    </div>
+                </div>
+
+                <ul class="toggle-list">
+                    @foreach (var toggle in group.Toggles)
+                    {
+                        var isAvailable = OverlayVisibility.IsAvailable(toggle);
+                        var hint = HintFor(toggle);
+                        var hintId = $"hint-{toggle.Token}";
+                        <li>
+                            <label class="toggle" title="@TitleFor(toggle)">
+                                <Swatch Value="@toggle.Swatch" />
+                                <span class="toggle-text">
+                                    <span class="toggle-label">@toggle.Label</span>
+                                    @if (hint is not null)
+                                    {
+                                        <span id="@hintId" class="toggle-hint">@hint</span>
+                                    }
+                                </span>
+                                <input type="checkbox"
+                                       role="switch"
+                                       class="switch"
+                                       checked="@Display.IsOn(toggle.Token)"
+                                       disabled="@(!isAvailable)"
+                                       aria-describedby="@(hint is null ? null : hintId)"
+                                       data-testid="@($"toggle-{toggle.Token}")"
+                                       @onchange="@(args => Display.SetOn(toggle.Token, args.Value is true))" />
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    </div>
+</section>
+
+@code {
+    private bool _isOpen = true;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ToggleGroup> Groups { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public MapDisplayState Display { get; set; } = null!;
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    private IReadOnlySet<string> _unavailableTokens = new HashSet<string>();
+
+    protected override void OnParametersSet() => _unavailableTokens = OverlayVisibility.UnavailableTokens(Groups);
+
+    private void TogglePanel() => _isOpen = !_isOpen;
+
+    private bool AllMatch(ToggleGroup group, bool on) =>
+        group.Toggles.Where(OverlayVisibility.IsAvailable).All(toggle => Display.IsOn(toggle.Token) == on);
+
+    private void SetGroup(ToggleGroup group, bool on)
+    {
+        var tokens = group
+            .Toggles.Where(OverlayVisibility.IsAvailable)
+            .Select(toggle => toggle.Token)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // one Replace instead of a SetOn per toggle, so the map syncs once
+        Display.Replace(Display.Items.Select(item => tokens.Contains(item.Id) ? item with { IsOn = on } : item));
+    }
+
+    private string? HintFor(LayerToggle toggle)
+    {
+        if (!OverlayVisibility.IsAvailable(toggle))
+        {
+            return "Hidden by the style";
+        }
+
+        return OverlayVisibility.IsMostlyUnreachable(toggle, _unavailableTokens)
+            ? "Some layers hidden by the style"
+            : null;
+    }
+
+    private static string? TitleFor(LayerToggle toggle)
+    {
+        var unreachable = OverlayVisibility.UnreachableLayerCount(toggle);
+        return unreachable == 0
+            ? null
+            : $"{unreachable} of {toggle.Layers.Count} style layers ship with visibility \"none\" and can't be shown here yet";
+    }
+}
