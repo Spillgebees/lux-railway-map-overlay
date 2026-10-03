@@ -80,7 +80,7 @@ LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm
 
 ### Alternative: local generation
 
-If you have `osmium-tool`, `gdal-bin`, `python3` (3.13+), and `tippecanoe` installed locally:
+If you have `osmium-tool`, `gdal-bin`, `python3` (3.14+), and `tippecanoe` installed locally:
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 cd scripts && python3 -m generator --countries lu --output-dir ../data
@@ -156,7 +156,7 @@ These tasks are intended as the default local command surface so the common work
 
 ## Viewer Dependency
 
-The demo viewer builds against the `Spillgebees.Blazor.Map` package by default (`0.16.0`). The current project file does not define an external local project-reference fallback.
+The demo viewer builds against the `Spillgebees.Blazor.Map` package by default (`0.23.0`). The current project file does not define an external local project-reference fallback.
 
 ## Local Validation
 

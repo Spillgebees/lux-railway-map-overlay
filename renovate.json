@@ -1,4 +1,12 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["local>Spillgebees/admin"]
+	"extends": ["local>Spillgebees/admin"],
+	"packageRules": [
+		{
+			"description": "The chart deploys this repo's own image. values.yaml leaves image.tag empty so it defaults to the chart appVersion, and the deployment template renders repository:tag, so a digest pin would produce an invalid image reference.",
+			"matchManagers": ["helm-values"],
+			"matchPackageNames": ["ghcr.io/spillgebees/lux-railway-map-overlay"],
+			"enabled": false
+		}
+	]
 }

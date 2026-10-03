@@ -4,7 +4,13 @@
 <PageTitle>Railway Tile Viewer</PageTitle>
 
 <div class="viewer-shell">
-    <SgbMap @ref="_map" MapOptions="@_mapOptions" Height="100%" />
+    <SgbMap
+        Center="@(new Coordinate(49.61, 6.13))"
+        Zoom="8"
+        Styles="@_styles"
+        ComposedGlyphsUrl="@_composedGlyphsUrl"
+        Display="@_display"
+        Height="100%" />
 
     <aside class="filter-showcase" aria-label="Rail layer filtering showcase">
         <div class="panel-kicker">Normalized rail schema</div>
@@ -24,7 +30,7 @@
                         <input
                             type="checkbox"
                             checked="@family.IsEnabled"
-                            @onchange="@(async args => await SetToggleAsync(family, args))" />
+                            @onchange="@(args => SetToggle(family, args))" />
                         <span>@family.Label</span>
                     </label>
                 }
@@ -40,7 +46,7 @@
                         <input
                             type="checkbox"
                             checked="@mode.IsEnabled"
-                            @onchange="@(async args => await SetToggleAsync(mode, args))" />
+                            @onchange="@(args => SetToggle(mode, args))" />
                         <span>@mode.Label</span>
                     </label>
                 }
@@ -56,7 +62,7 @@
                         <input
                             type="checkbox"
                             checked="@state.IsEnabled"
-                            @onchange="@(async args => await SetToggleAsync(state, args))" />
+                            @onchange="@(args => SetToggle(state, args))" />
                         <span>@state.Label</span>
                     </label>
                 }
@@ -77,8 +83,9 @@
 @code {
     private const string OverlayStyleId = "lux-railway-overlay";
 
-    private SgbMap? _map;
-    private MapOptions _mapOptions = null!;
+    private IReadOnlyList<MapStyle> _styles = [];
+    private string? _composedGlyphsUrl;
+    private MapDisplayState _display = null!;
     private readonly ToggleOption[] _familyToggles =
     [
         new("tracks", "Tracks", "#111827"),
@@ -120,43 +127,32 @@
         var tileServerUrl = Configuration.GetValue<string>("TileServerUrl")
             ?? "http://localhost:3000";
 
-        _mapOptions = new MapOptions(
-            Center: new Coordinate(49.61, 6.13),
-            Zoom: 8,
-            Styles: [
-                MapStyle.OpenFreeMap.Positron,
-                MapStyle.FromUrl($"{tileServerUrl}/style.json").WithId("lux-railway-overlay")
-            ],
-            ComposedGlyphsUrl: $"{tileServerUrl}/fonts/{{fontstack}}/{{range}}.pbf"
+        _styles =
+        [
+            MapStyle.OpenFreeMap.Positron,
+            MapStyle.FromUrl($"{tileServerUrl}/style.json").WithId(OverlayStyleId)
+        ];
+        _composedGlyphsUrl = $"{tileServerUrl}/fonts/{{fontstack}}/{{range}}.pbf";
+        _display = new MapDisplayState(
+            _styleLayers.Select(layer => new MapDisplayItem(
+                layer.Id,
+                [MapDisplayTarget.StyleLayers(OverlayStyleId, layer.Id)],
+                IsOn: IsLayerVisible(layer)
+            ))
         );
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender || _map is null)
-        {
-            return;
-        }
-
-        await ApplyLayerVisibilityAsync();
-    }
-
-    private async Task SetToggleAsync(ToggleOption option, ChangeEventArgs args)
+    private void SetToggle(ToggleOption option, ChangeEventArgs args)
     {
         option.IsEnabled = args.Value is bool isChecked && isChecked;
-        await ApplyLayerVisibilityAsync();
+        ApplyLayerVisibility();
     }
 
-    private async Task ApplyLayerVisibilityAsync()
+    private void ApplyLayerVisibility()
     {
-        if (_map is null)
-        {
-            return;
-        }
-
         foreach (var layer in _styleLayers)
         {
-            await _map.SetStyleLayerVisibilityAsync(OverlayStyleId, layer.Id, IsLayerVisible(layer));
+            _display.SetOn(layer.Id, IsLayerVisible(layer));
         }
     }
 
