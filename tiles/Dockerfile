@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim AS glyphs
+FROM debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS glyphs
 
 ARG FONT_MAKER_REF=c56771948c59a01b89d0498d47dc4abf56c25338
 
