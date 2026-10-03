@@ -178,3 +178,39 @@ def test_select_best_segments_prefers_longest_segment_spanning_both_stations() -
 
     # assert
     assert selected == [long_full_match]
+
+
+def test_select_best_segments_keeps_segment_ending_exactly_at_both_stations() -> None:
+    # arrange
+    from_station = [[6.0, 49.0]]
+    to_station = [[6.2, 49.2]]
+    unrelated = [[5.0, 48.0], [5.1, 48.1]]
+    exact_match = [[6.0, 49.0], [6.1, 49.1], [6.2, 49.2]]
+
+    # act
+    selected = _select_best_segments([unrelated, exact_match], from_station, to_station)
+
+    # assert
+    assert selected == [exact_match]
+
+
+def test_chain_ways_reaches_nodes_placed_exactly_on_the_stations() -> None:
+    # arrange
+    # one straight line of ten ways, with more nodes than the endpoint
+    # shortlist holds, so a station node ranked as infinitely far would drop
+    # out of the search
+    nodes = {node_id: (6.0 + node_id * 0.01, 49.0) for node_id in range(1, 12)}
+    ways = {
+        100 + node_id: {"id": 100 + node_id, "nodes": [node_id, node_id + 1]}
+        for node_id in range(1, 11)
+    }
+    from_station = [list(nodes[1])]
+    to_station = [list(nodes[11])]
+
+    # act
+    segments = chain_ways(list(ways), ways, nodes, from_station, to_station)
+
+    # assert
+    assert len(segments) == 1
+    assert segments[0][0] == list(nodes[1])
+    assert segments[0][-1] == list(nodes[11])

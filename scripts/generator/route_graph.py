@@ -517,14 +517,14 @@ def _extract_component_path(
     ranked_from_nodes = sorted(
         component_node_ids,
         key=lambda node_id: (
-            _node_distance(node_id, from_station_matches, nodes) or float("inf"),
+            _distance_or_inf(_node_distance(node_id, from_station_matches, nodes)),
             -_endpoint_degree(record_indices, node_id, endpoint_index),
         ),
     )[:_MAX_ENDPOINT_CANDIDATES]
     ranked_to_nodes = sorted(
         component_node_ids,
         key=lambda node_id: (
-            _node_distance(node_id, to_station_matches, nodes) or float("inf"),
+            _distance_or_inf(_node_distance(node_id, to_station_matches, nodes)),
             -_endpoint_degree(record_indices, node_id, endpoint_index),
         ),
     )[:_MAX_ENDPOINT_CANDIDATES]
@@ -579,6 +579,11 @@ def _extract_component_path(
         return None
 
     return best_component_path[1]
+
+
+def _distance_or_inf(distance: float | None) -> float:
+    """Map a missing distance to infinity without treating 0.0 as missing."""
+    return math.inf if distance is None else distance
 
 
 def _endpoint_distance(
@@ -653,9 +658,9 @@ def _select_best_segments(
     full_match_segment_indices = [
         index
         for index, segment in enumerate(segments)
-        if (_endpoint_distance(segment, from_station_matches) or float("inf"))
+        if _distance_or_inf(_endpoint_distance(segment, from_station_matches))
         <= endpoint_match_threshold
-        and (_endpoint_distance(segment, to_station_matches) or float("inf"))
+        and _distance_or_inf(_endpoint_distance(segment, to_station_matches))
         <= endpoint_match_threshold
     ]
     if full_match_segment_indices:
@@ -668,15 +673,17 @@ def _select_best_segments(
     preserve_indices.add(
         min(
             range(len(segments)),
-            key=lambda index: _endpoint_distance(segments[index], from_station_matches)
-            or float("inf"),
+            key=lambda index: _distance_or_inf(
+                _endpoint_distance(segments[index], from_station_matches)
+            ),
         )
     )
     preserve_indices.add(
         min(
             range(len(segments)),
-            key=lambda index: _endpoint_distance(segments[index], to_station_matches)
-            or float("inf"),
+            key=lambda index: _distance_or_inf(
+                _endpoint_distance(segments[index], to_station_matches)
+            ),
         )
     )
 
