@@ -308,19 +308,25 @@ jobs:
         with:
           version: ${{ env.HELM_VERSION }}
 
-      # Default values plus every ci/*-values.yaml scenario (ingress with TLS, cert-manager).
+      # Chart.yaml keeps the 0.0.0 placeholder until publish-image.yml packages it,
+      # so CI sets a stand-in tag. Renders default values plus every ci/*-values.yaml
+      # scenario, and checks the placeholder guard still rejects an unset tag.
       - name: Lint and render chart
         run: |
           mkdir -p rendered
-          helm lint --strict "$CHART"
-          helm template ci "$CHART" > rendered/default.yaml
+          if helm template ci "$CHART" > /dev/null 2>&1; then
+            echo "::error::rendering without image.tag should fail on the 0.0.0 placeholder"
+            exit 1
+          fi
+          helm lint --strict "$CHART" --set image.tag=ci
+          helm template ci "$CHART" --set image.tag=ci > rendered/default.yaml
           for values in "$CHART"/ci/*-values.yaml; do
             name="$(basename "$values" -values.yaml)"
-            helm lint --strict "$CHART" --values "$values"
-            helm template ci "$CHART" --values "$values" > "rendered/${name}.yaml"
+            helm lint --strict "$CHART" --set image.tag=ci --values "$values"
+            helm template ci "$CHART" --set image.tag=ci --values "$values" > "rendered/${name}.yaml"
           done
           # kubeconform accepts an Ingress without TLS, so check the cert-manager default block explicitly
-          if ! grep -q '^  tls:$' <(helm template ci "$CHART" --values "$CHART/ci/cert-manager-values.yaml" --show-only templates/ingress.yaml); then
+          if ! grep -q '^  tls:$' <(helm template ci "$CHART" --set image.tag=ci --values "$CHART/ci/cert-manager-values.yaml" --show-only templates/ingress.yaml); then
             echo "::error::cert-manager scenario rendered an Ingress without spec.tls"
             exit 1
           fi
