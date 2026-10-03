@@ -37,7 +37,7 @@
 		{
 			"label": "Validate Fast",
 			"type": "shell",
-			"command": "ruff format --check && ruff check && pytest tests/generator && dotnet csharpier check viewer && actionlint",
+			"command": "uv run ruff format --check && uv run ruff check && uv run basedpyright && uv run pytest tests/generator && dotnet csharpier check viewer && actionlint",
 			"group": "test",
 			"problemMatcher": []
 		}
