@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import io
 import json
 import urllib.error
@@ -10,6 +11,7 @@ import pytest
 
 from generator.pipeline_support import (
     DownloadVerificationError,
+    OverpassError,
     PipelineError,
     backoff_delay,
     check_required_tools,
@@ -21,6 +23,7 @@ from generator.pipeline_support import (
     load_geojson,
     require_existing_file,
     tippecanoe_layer_arg,
+    validate_overpass_payload,
     write_empty_geojson,
 )
 
@@ -351,9 +354,165 @@ def test_download_overpass_uses_fallback_endpoint(monkeypatch, tmp_path) -> None
         "[out:json];relation[route=train];out;",
         output_path,
         ("https://first.example/api", "https://second.example/api"),
+        sleep=lambda delay: None,
     )
 
     assert json.loads(output_path.read_text(encoding="utf-8")) == {"elements": []}
+
+
+OVERPASS_URLS = ("https://first.example/api", "https://second.example/api")
+OVERPASS_QUERY = "[out:json];relation[route=train];out;"
+
+
+def overpass_response(payload: dict):
+    return lambda: FakeHttpResponse(json.dumps(payload).encode("utf-8"))
+
+
+@pytest.mark.parametrize(
+    "remark",
+    [
+        'runtime error: Query timed out in "recurse" at line 1 after 121 seconds.',
+        "runtime error: Query run out of memory using about 2048 MB of RAM.",
+    ],
+)
+def test_download_overpass_rejects_runtime_error_remark(tmp_path, remark) -> None:
+    # arrange
+    output_path = tmp_path / "routes.json"
+    partial = {"elements": [{"type": "node", "id": 1}], "remark": remark}
+    opener = FakeOpener({url: [overpass_response(partial)] for url in OVERPASS_URLS})
+    warnings: list[str] = []
+
+    # act
+    with pytest.raises(OverpassError, match=r"remark: runtime error"):
+        download_overpass(
+            OVERPASS_QUERY,
+            output_path,
+            OVERPASS_URLS,
+            opener=opener,
+            sleep=lambda delay: None,
+            warn=warnings.append,
+        )
+
+    # assert
+    assert not output_path.exists()
+    assert not part_path_for(output_path).exists()
+    assert len(opener.requests) == 4
+    assert all(
+        "runtime error" in warning for warning in warnings if "failed" in warning
+    )
+
+
+def test_download_overpass_falls_through_on_remark_to_next_mirror(tmp_path) -> None:
+    # arrange
+    output_path = tmp_path / "routes.json"
+    good = {"elements": [{"type": "relation", "id": 7}]}
+    opener = FakeOpener(
+        {
+            OVERPASS_URLS[0]: [
+                overpass_response({"elements": [], "remark": "runtime error: x"})
+            ],
+            OVERPASS_URLS[1]: [overpass_response(good)],
+        }
+    )
+
+    # act
+    download_overpass(
+        OVERPASS_QUERY,
+        output_path,
+        OVERPASS_URLS,
+        opener=opener,
+        sleep=lambda delay: None,
+    )
+
+    # assert
+    assert json.loads(output_path.read_text(encoding="utf-8")) == good
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        TimeoutError("The read operation timed out"),
+        ConnectionResetError("connection reset by peer"),
+        http.client.IncompleteRead(b"{", 100),
+        urllib.error.HTTPError(OVERPASS_URLS[0], 504, "Gateway Timeout", {}, None),
+    ],
+)
+def test_download_overpass_moves_to_next_mirror_after_error(tmp_path, error) -> None:
+    # arrange
+    output_path = tmp_path / "routes.json"
+    opener = FakeOpener(
+        {
+            OVERPASS_URLS[0]: [error],
+            OVERPASS_URLS[1]: [overpass_response({"elements": []})],
+        }
+    )
+    sleeps: list[float] = []
+
+    # act
+    download_overpass(
+        OVERPASS_QUERY, output_path, OVERPASS_URLS, opener=opener, sleep=sleeps.append
+    )
+
+    # assert
+    assert opener.urls() == list(OVERPASS_URLS)
+    assert sleeps == [5.0]
+    assert json.loads(output_path.read_text(encoding="utf-8")) == {"elements": []}
+
+
+def test_download_overpass_retries_mirrors_with_backoff_and_keeps_cache_on_failure(
+    tmp_path,
+) -> None:
+    # arrange
+    output_path = tmp_path / "routes.json"
+    output_path.write_text('{"elements": ["previous"]}', encoding="utf-8")
+    opener = FakeOpener(
+        {
+            OVERPASS_URLS[0]: [TimeoutError("timed out")],
+            OVERPASS_URLS[1]: [lambda: FakeHttpResponse(b"<html>busy</html>")],
+        }
+    )
+    sleeps: list[float] = []
+
+    # act
+    with pytest.raises(OverpassError, match=r"all 4 attempt\(s\) failed"):
+        download_overpass(
+            OVERPASS_QUERY,
+            output_path,
+            OVERPASS_URLS,
+            opener=opener,
+            sleep=sleeps.append,
+        )
+
+    # assert
+    assert opener.urls() == list(OVERPASS_URLS) * 2
+    assert sleeps == [5.0, 10.0, 20.0]
+    assert output_path.read_text(encoding="utf-8") == '{"elements": ["previous"]}'
+    assert not part_path_for(output_path).exists()
+
+
+def test_download_overpass_sends_descriptive_user_agent(tmp_path) -> None:
+    # arrange
+    opener = FakeOpener({OVERPASS_URLS[0]: [overpass_response({"elements": []})]})
+
+    # act
+    download_overpass(
+        OVERPASS_QUERY, tmp_path / "routes.json", OVERPASS_URLS[:1], opener=opener
+    )
+
+    # assert
+    assert opener.requests[0].get_header("User-agent") == (
+        "lux-railway-map-overlay "
+        "(+https://github.com/Spillgebees/lux-railway-map-overlay)"
+    )
+
+
+@pytest.mark.parametrize(
+    "body",
+    [b"not json", b"[]", b'{"remark": "runtime error: x"}', b'{"elements": {}}'],
+)
+def test_validate_overpass_payload_rejects_unusable_responses(body) -> None:
+    with pytest.raises(OverpassError):
+        validate_overpass_payload(body)
 
 
 def test_run_commands_parallel_executes_all_commands(monkeypatch) -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-import urllib.error
+
 from types import MethodType
 
 import pytest
@@ -10,6 +10,7 @@ from generator import platform_references
 from generator.config import Settings
 from generator.console import Console
 from generator.pipeline import GeneratorPipeline, PipelineError
+from generator.pipeline_support import OverpassError
 
 
 def test_build_platform_reference_layer_prefers_platform_areas_and_keeps_unmatched_stop_positions(
@@ -391,8 +392,8 @@ def test_extract_routes_fails_by_default_when_overpass_unavailable(
 
     monkeypatch.setattr(
         "generator.pipeline.download_overpass",
-        lambda query, output_path, api_urls: (_ for _ in ()).throw(
-            urllib.error.URLError("overpass down")
+        lambda query, output_path, api_urls, **kwargs: (_ for _ in ()).throw(
+            OverpassError("overpass down")
         ),
     )
 
@@ -423,8 +424,8 @@ def test_extract_routes_can_soft_fail_when_missing_routes_are_allowed(
 
     monkeypatch.setattr(
         "generator.pipeline.download_overpass",
-        lambda query, output_path, api_urls: (_ for _ in ()).throw(
-            urllib.error.URLError("overpass down")
+        lambda query, output_path, api_urls, **kwargs: (_ for _ in ()).throw(
+            OverpassError("overpass down")
         ),
     )
 
@@ -436,3 +437,91 @@ def test_extract_routes_can_soft_fail_when_missing_routes_are_allowed(
     assert json.loads(
         (geojson_dir / "rail_routes_display.geojson").read_text(encoding="utf-8")
     ) == {"type": "FeatureCollection", "features": []}
+
+
+def _route_pipeline(tmp_path) -> tuple[GeneratorPipeline, Settings]:
+    output_dir = tmp_path / "data"
+    geojson_dir = output_dir / "intermediate" / "geojson"
+    geojson_dir.mkdir(parents=True)
+    (geojson_dir / "rail_stops.geojson").write_text(
+        json.dumps({"type": "FeatureCollection", "features": []}),
+        encoding="utf-8",
+    )
+    settings = Settings(countries=("lu",), output_dir=output_dir, script_dir=tmp_path)
+    settings.overpass_cache_dir.mkdir(parents=True)
+    return GeneratorPipeline(settings, Console(use_color=False)), settings
+
+
+def test_extract_routes_discards_cached_response_with_runtime_error_remark(
+    monkeypatch, tmp_path
+) -> None:
+    # arrange
+    pipeline, settings = _route_pipeline(tmp_path)
+    settings.overpass_routes_path.write_text(
+        json.dumps(
+            {
+                "elements": [],
+                "remark": 'runtime error: Query timed out in "recurse" at line 1',
+            }
+        ),
+        encoding="utf-8",
+    )
+    queried: list[str] = []
+
+    def fake_download_overpass(query, output_path, api_urls, **kwargs) -> None:
+        queried.append(query)
+        output_path.write_text(json.dumps({"elements": []}), encoding="utf-8")
+
+    monkeypatch.setattr("generator.pipeline.download_overpass", fake_download_overpass)
+
+    # act
+    pipeline.extract_routes()
+
+    # assert
+    assert len(queried) == 1
+    assert json.loads(settings.overpass_routes_path.read_text("utf-8")) == {
+        "elements": []
+    }
+
+
+def test_extract_routes_fails_when_poisoned_cache_cannot_be_refreshed(
+    monkeypatch, tmp_path
+) -> None:
+    # arrange
+    pipeline, settings = _route_pipeline(tmp_path)
+    settings.overpass_routes_path.write_text(
+        json.dumps({"elements": [], "remark": "runtime error: out of memory"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "generator.pipeline.download_overpass",
+        lambda query, output_path, api_urls, **kwargs: (_ for _ in ()).throw(
+            OverpassError("overpass down")
+        ),
+    )
+
+    # act
+    with pytest.raises(PipelineError, match=r"Overpass API query failed"):
+        pipeline.extract_routes()
+
+    # assert
+    assert not settings.overpass_routes_path.exists()
+
+
+def test_extract_routes_reuses_valid_cached_response(monkeypatch, tmp_path) -> None:
+    # arrange
+    pipeline, settings = _route_pipeline(tmp_path)
+    settings.overpass_routes_path.write_text(
+        json.dumps({"elements": []}), encoding="utf-8"
+    )
+
+    def fail_download_overpass(*args, **kwargs) -> None:
+        raise AssertionError("cached response should have been reused")
+
+    monkeypatch.setattr("generator.pipeline.download_overpass", fail_download_overpass)
+
+    # act
+    pipeline.extract_routes()
+
+    # assert
+    assert (settings.geojson_dir / "rail_routes.geojson").exists()

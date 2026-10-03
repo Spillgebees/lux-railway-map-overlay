@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import os
 import re
@@ -28,6 +29,9 @@ DOWNLOAD_TIMEOUT_SECONDS = 120
 DOWNLOAD_MAX_ATTEMPTS = 4
 RETRY_BASE_DELAY_SECONDS = 5.0
 RETRY_MAX_DELAY_SECONDS = 60.0
+OVERPASS_TIMEOUT_SECONDS = 180
+# each mirror is tried this many times before giving up
+OVERPASS_ROUNDS = 2
 
 _MD5_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
@@ -44,6 +48,10 @@ class PipelineError(RuntimeError):
 
 class DownloadVerificationError(PipelineError):
     """A download finished but its size or checksum does not match."""
+
+
+class OverpassError(PipelineError):
+    """Every Overpass attempt failed or returned an unusable response."""
 
 
 def _ignore(_message: str) -> None:
@@ -76,8 +84,9 @@ def is_transient_error(error: BaseException) -> bool:
     if isinstance(error, DownloadVerificationError):
         # truncated or corrupted transfer
         return True
-    # TimeoutError and ConnectionError are OSError subclasses, as is URLError
-    return isinstance(error, OSError)
+    # TimeoutError and ConnectionError are OSError subclasses, as is URLError;
+    # a connection dropped mid-body surfaces as http.client.IncompleteRead
+    return isinstance(error, (OSError, http.client.HTTPException))
 
 
 def describe_error(error: BaseException) -> str:
@@ -172,9 +181,10 @@ def _content_length(response: Any) -> int | None:
         return None
 
 
-def fetch_md5(url: str, *, opener: UrlOpener = urllib.request.urlopen) -> str:
+def fetch_md5(url: str, *, opener: UrlOpener | None = None) -> str:
+    urlopen = opener or urllib.request.urlopen
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with opener(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:
+    with urlopen(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:
         return parse_md5_file(response.read(4096).decode("utf-8", errors="replace"))
 
 
@@ -224,7 +234,7 @@ def download_file(
     url: str,
     output_path: Path,
     *,
-    opener: UrlOpener = urllib.request.urlopen,
+    opener: UrlOpener | None = None,
     sleep: Sleeper = time.sleep,
     warn: Logger = _ignore,
     max_attempts: int = DOWNLOAD_MAX_ATTEMPTS,
@@ -235,8 +245,9 @@ def download_file(
     the published ``<url>.md5``, then renamed into place. A sidecar
     ``<name>.download.json`` records the verified size and checksum.
     """
+    urlopen = opener or urllib.request.urlopen
     retry_transient(
-        lambda: _download_once(url, output_path, opener),
+        lambda: _download_once(url, output_path, urlopen),
         description=f"Download of {output_path.name}",
         max_attempts=max_attempts,
         sleep=sleep,
@@ -244,30 +255,83 @@ def download_file(
     )
 
 
-def download_overpass(query: str, output_path: Path, api_urls: tuple[str, ...]) -> None:
-    request_body = urllib.parse.urlencode({"data": query}).encode("utf-8")
-    last_error: urllib.error.URLError | None = None
+def validate_overpass_payload(body: bytes) -> dict[str, Any]:
+    """Parse an Overpass JSON response and reject failed or partial results.
 
-    for api_url in api_urls:
+    Overpass can answer HTTP 200 with partial data and a ``remark`` such as
+    ``runtime error: Query timed out ...`` or ``runtime error: Query run out
+    of memory ...``. Any remark is treated as a failure so an incomplete
+    route set is never cached or published.
+    """
+    try:
+        payload = json.loads(body)
+    except ValueError as error:
+        raise OverpassError(f"response is not valid JSON ({error})") from error
+    if not isinstance(payload, dict) or not isinstance(payload.get("elements"), list):
+        raise OverpassError("response has no 'elements' list")
+    remark = payload.get("remark")
+    if remark:
+        raise OverpassError(f"response carries remark: {str(remark).strip()}")
+    return payload
+
+
+def download_overpass(
+    query: str,
+    output_path: Path,
+    api_urls: tuple[str, ...],
+    *,
+    opener: UrlOpener | None = None,
+    sleep: Sleeper = time.sleep,
+    warn: Logger = _ignore,
+    rounds: int = OVERPASS_ROUNDS,
+) -> None:
+    """Query Overpass mirrors in turn and cache the first valid response.
+
+    Each mirror is tried ``rounds`` times, with exponential backoff between
+    attempts. ``output_path`` is written atomically, and only after the
+    response passes ``validate_overpass_payload``. Raises ``OverpassError``
+    when every attempt fails.
+    """
+    urlopen = opener or urllib.request.urlopen
+    request_body = urllib.parse.urlencode({"data": query}).encode("utf-8")
+    attempts = [api_url for _ in range(rounds) for api_url in api_urls]
+    failures: list[str] = []
+
+    for attempt, api_url in enumerate(attempts, start=1):
+        if attempt > 1:
+            delay = backoff_delay(attempt - 1)
+            warn(f"Retrying Overpass via {api_url} in {delay:.0f}s")
+            sleep(delay)
+
         request = urllib.request.Request(
             api_url,
             data=request_body,
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
-                "User-Agent": "lux-railway-map-overlay/1.0",
+                "User-Agent": USER_AGENT,
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=180) as response:
-                with open(output_path, "wb") as out:
-                    shutil.copyfileobj(response, out)
-                return
-        except urllib.error.URLError as error:
-            last_error = error
+            with urlopen(request, timeout=OVERPASS_TIMEOUT_SECONDS) as response:
+                body = response.read()
+            validate_overpass_payload(body)
+        except (OverpassError, OSError, http.client.HTTPException) as error:
+            # URLError, TimeoutError and ConnectionError are OSError subclasses;
+            # IncompleteRead (dropped connection) is an HTTPException
+            failure = f"{api_url}: {describe_error(error)}"
+            failures.append(failure)
+            warn(f"Overpass query failed ({failure})")
+            continue
 
-    if last_error is not None:
-        raise last_error
-    raise PipelineError("Overpass download failed without a reported error")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        write_bytes_atomic(output_path, body)
+        return
+
+    if not failures:
+        raise OverpassError("no Overpass API URLs configured")
+    raise OverpassError(
+        f"all {len(failures)} attempt(s) failed: " + "; ".join(failures)
+    )
 
 
 def ogr2ogr(

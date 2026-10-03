@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import http.client
 import shutil
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -119,8 +120,9 @@ def download_sources(
         info(f"Downloading {country_names[code]} ({filename})...")
         try:
             downloader(url, output_path)
-        except (PipelineError, OSError) as error:
-            # URLError, TimeoutError and ConnectionError are OSError subclasses
+        except (PipelineError, OSError, http.client.HTTPException) as error:
+            # URLError, TimeoutError and ConnectionError are OSError subclasses;
+            # IncompleteRead (dropped connection) is an HTTPException
             output_path.unlink(missing_ok=True)
             part_path_for(output_path).unlink(missing_ok=True)
             raise PipelineError(

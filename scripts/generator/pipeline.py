@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import urllib.error
 from pathlib import Path
 
 from generator.config import COUNTRY_BBOX, COUNTRY_NAMES, GEOFABRIK_URLS, Settings
@@ -30,6 +29,7 @@ from generator.pipeline_reporting import (
 )
 from generator.pipeline_sources import download_sources, filter_sources, merge_sources
 from generator.pipeline_support import (
+    OverpassError,
     PipelineError,
     check_required_tools,
     download_file,
@@ -39,6 +39,7 @@ from generator.pipeline_support import (
     require_existing_file,
     run_command,
     run_commands_parallel,
+    validate_overpass_payload,
     write_empty_geojson,
 )
 from generator.pipeline_tiles import (
@@ -368,8 +369,16 @@ class GeneratorPipeline:
         local runs can opt into a soft-fail mode via the CLI.
         """
         if routes_json.exists():
-            self.console.info(f"Using cached Overpass response ({routes_json})")
-            return True
+            try:
+                validate_overpass_payload(routes_json.read_bytes())
+            except OverpassError as error:
+                # caches written before responses were validated may hold a
+                # partial result; never reuse one
+                self.console.warn(f"Discarding cached Overpass response: {error}")
+                routes_json.unlink()
+            else:
+                self.console.info(f"Using cached Overpass response ({routes_json})")
+                return True
 
         self.console.info(
             f"Querying Overpass API for route relations (bbox: {bbox})..."
@@ -380,8 +389,9 @@ class GeneratorPipeline:
                 self._build_route_query(bbox),
                 routes_json,
                 self.OVERPASS_API_URLS,
+                warn=self.console.warn,
             )
-        except urllib.error.URLError as error:
+        except OverpassError as error:
             return self._handle_route_download_failure(
                 error,
                 routes_geojson,
@@ -399,7 +409,7 @@ class GeneratorPipeline:
 
     def _handle_route_download_failure(
         self,
-        error: urllib.error.URLError,
+        error: OverpassError,
         routes_geojson: Path,
         routes_display_geojson: Path,
     ) -> bool:
@@ -407,12 +417,12 @@ class GeneratorPipeline:
         if not self.settings.allow_missing_routes:
             raise PipelineError(
                 "Overpass API query failed during route extraction: "
-                f"{error.reason}. Re-run with --allow-missing-routes only for local "
+                f"{error}. Re-run with --allow-missing-routes only for local "
                 "or manual builds where empty route layers are acceptable."
             ) from error
 
         self.console.warn("Overpass API query failed - skipping route extraction")
-        self.console.warn(str(error.reason))
+        self.console.warn(str(error))
         if self._has_existing_route_outputs(routes_geojson, routes_display_geojson):
             self.console.warn("Preserving existing route GeoJSON and display GeoJSON")
             return False
