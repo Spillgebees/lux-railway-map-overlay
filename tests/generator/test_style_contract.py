@@ -314,22 +314,27 @@ def test_publish_image_workflow_validates_normalized_route_geojson_names() -> No
 
 def test_viewer_route_toggle_targets_every_route_style_layer() -> None:
     # arrange
-    viewer_page = (REPOSITORY_ROOT / "viewer" / "Pages" / "Home.razor").read_text()
+    style = json.loads((REPOSITORY_ROOT / "styles" / "style.json").read_text())
+    catalog = (
+        REPOSITORY_ROOT / "viewer" / "Overlay" / "StyleToggleCatalog.cs"
+    ).read_text()
     expected_route_layers = {
-        'new("railway-routes-casing", ["routes"])',
-        'new("railway-routes", ["routes"])',
-        'new("railway-routes-label", ["routes"])',
+        "railway-routes-casing",
+        "railway-routes",
+        "railway-routes-label",
     }
 
     # act
-    missing_route_layers = {
-        route_layer
-        for route_layer in expected_route_layers
-        if route_layer not in viewer_page
+    routes_toggle_layers = {
+        layer["id"]
+        for layer in style["layers"]
+        if "routes" in layer.get("metadata", {}).get("toggle", [])
     }
 
     # assert
-    assert not missing_route_layers
+    assert '"toggle"' in catalog
+    assert "routes" in style["metadata"]["toggleFamilies"]
+    assert expected_route_layers <= routes_toggle_layers
 
 
 def test_geojson_lifecycle_sql_includes_razed_tracks() -> None:
