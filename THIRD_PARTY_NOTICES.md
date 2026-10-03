@@ -40,7 +40,7 @@ This file is a practical notice summary for this repository and its standard bui
 ### GDAL
 
 - Project: https://gdal.org/
-- Usage here: `ogr2ogr` converts OSM data to GeoJSON, shapefiles, and GeoPackage in the generator image
+- Usage here: `ogr2ogr` converts OSM data to GeoJSON and GeoPackage in the generator image
 - License: MIT
 
 ### Shapely

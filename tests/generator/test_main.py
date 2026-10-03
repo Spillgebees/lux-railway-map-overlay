@@ -97,3 +97,98 @@ def test_main_reports_pipeline_errors(monkeypatch) -> None:
 
     assert exit_code == 1
     assert messages == ["boom"]
+
+
+def test_parser_defaults_to_all_supported_countries(monkeypatch) -> None:
+    # arrange
+    monkeypatch.delenv("OUTPUT_DIR", raising=False)
+    parser = __main__.build_parser()
+
+    # act
+    args = parser.parse_args([])
+
+    # assert
+    assert __main__.parse_countries(args.countries) == ("lu", "be", "de", "fr")
+
+
+def test_parser_defaults_output_dir_to_relative_data_without_env(monkeypatch) -> None:
+    # arrange
+    monkeypatch.delenv("OUTPUT_DIR", raising=False)
+    parser = __main__.build_parser()
+
+    # act
+    args = parser.parse_args(["--countries", "lu"])
+
+    # assert
+    assert args.output_dir == "./data"
+
+
+def test_parser_defaults_output_dir_to_env_var(monkeypatch) -> None:
+    # arrange
+    monkeypatch.setenv("OUTPUT_DIR", "/data")
+    parser = __main__.build_parser()
+
+    # act
+    args = parser.parse_args(["--countries", "lu"])
+
+    # assert
+    assert args.output_dir == "/data"
+
+
+def test_parser_ignores_empty_output_dir_env_var(monkeypatch) -> None:
+    # arrange
+    monkeypatch.setenv("OUTPUT_DIR", "")
+    parser = __main__.build_parser()
+
+    # act
+    args = parser.parse_args([])
+
+    # assert
+    assert args.output_dir == "./data"
+
+
+def test_parser_output_dir_flag_overrides_env_var(monkeypatch, tmp_path) -> None:
+    # arrange
+    monkeypatch.setenv("OUTPUT_DIR", "/data")
+    parser = __main__.build_parser()
+
+    # act
+    args = parser.parse_args(["--output-dir", str(tmp_path)])
+
+    # assert
+    assert args.output_dir == str(tmp_path)
+
+
+def test_parse_countries_rejects_empty_value() -> None:
+    # arrange
+    raw_value = " , "
+
+    # act / assert
+    with pytest.raises(PipelineError, match="at least one country code"):
+        __main__.parse_countries(raw_value)
+
+
+def test_main_keeps_env_output_dir_when_only_countries_are_passed(
+    monkeypatch, tmp_path
+) -> None:
+    # arrange
+    captured: dict[str, object] = {}
+
+    class FakePipeline:
+        def __init__(self, settings, console) -> None:
+            captured["settings"] = settings
+
+        def run(self) -> None:
+            return None
+
+    monkeypatch.setenv("OUTPUT_DIR", str(tmp_path))
+    monkeypatch.setattr(__main__.Console, "create", classmethod(lambda cls: object()))
+    monkeypatch.setattr(__main__, "GeneratorPipeline", FakePipeline)
+
+    # act
+    exit_code = __main__.main(["--countries", "lu"])
+
+    # assert
+    assert exit_code == 0
+    assert captured["settings"].countries == ("lu",)
+    assert captured["settings"].output_dir == tmp_path

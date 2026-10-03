@@ -47,13 +47,6 @@ def print_pipeline_summary(
         size_formatter,
     )
 
-    for shapefile in sorted(settings.shapefile_dir.glob("*.shp")):
-        print_summary_file(
-            shapefile,
-            f"intermediate/shp/{shapefile.name}",
-            size_formatter,
-        )
-
     for geojson_file in sorted(settings.geojson_dir.glob("*.geojson")):
         print_summary_file(
             geojson_file,

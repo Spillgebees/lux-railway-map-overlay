@@ -6,8 +6,9 @@
 #   3. Browse:         http://localhost:3000/style.json (map style)
 #                      http://localhost:3000/catalog (tile catalog)
 #
-# To generate the default Luxembourg coverage set with cross-border context:
-#   docker compose --profile generate run --rm generate --countries lu,be,de,fr --output-dir /data
+# The default run covers lu,be,de,fr. For Luxembourg only:
+#   docker compose --profile generate run --rm generate --countries lu
+# Output goes to ./data either way, because the image sets OUTPUT_DIR=/data.
 
 services:
   generate:

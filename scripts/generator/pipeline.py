@@ -11,7 +11,6 @@ from generator.layer_specs import (
     GEOJSON_LAYER_SPECS,
     GPKG_LAYER_SPECS,
     LINE_TILE_LAYER_SPECS,
-    SHAPEFILE_LAYER_SPECS,
     STATION_TILE_LAYER_SPECS,
 )
 from generator.normalization import normalize_geojson_file
@@ -40,7 +39,6 @@ from generator.pipeline_support import (
     download_file,
     download_overpass,
     load_geojson,
-    ogr2ogr,
     require_existing_file,
     run_command,
     run_commands_parallel,
@@ -103,7 +101,6 @@ class GeneratorPipeline:
             self.settings.sources_dir,
             self.settings.overpass_cache_dir,
             self.settings.filtered_sources_dir,
-            self.settings.shapefile_dir,
             self.settings.geojson_dir,
             self.settings.intermediate_tiles_dir,
             self.settings.deliverables_dir,
@@ -119,8 +116,6 @@ class GeneratorPipeline:
             self.download,
             self.filter,
             self.merge,
-            self.convert_shapefiles,
-            self.create_indexes,
             self.convert_geojson,
             self.normalize_geojson,
             self.build_platform_reference_layer,
@@ -193,42 +188,6 @@ class GeneratorPipeline:
         )
 
         self.console.info(f"Merge complete ({format_elapsed(step_start)})")
-
-    def convert_shapefiles(self) -> None:
-        step_start = self._start_step("Converting to shapefiles (EPSG:3857)")
-        merged_path = self.settings.merged_pbf_path
-
-        for output_name, label, sql in SHAPEFILE_LAYER_SPECS:
-            self.console.info(f"Extracting {label}...")
-            ogr2ogr(
-                self.settings.shapefile_dir / output_name,
-                merged_path,
-                "ESRI Shapefile",
-                sql,
-                extra_args=["-lco", "ENCODING=UTF-8", "-overwrite"],
-                target_srs="EPSG:3857",
-                osmconf_path=self._osmconf_path,
-            )
-
-        self.console.info(
-            f"Shapefile conversion complete ({format_elapsed(step_start)})"
-        )
-
-    def create_indexes(self) -> None:
-        step_start = self._start_step("Creating spatial indexes")
-
-        if shutil.which("shapeindex") is None:
-            self.console.warn("shapeindex not found - skipping spatial index creation")
-            self.console.warn("Install Mapnik utilities for shapeindex support")
-            return
-
-        for shapefile in sorted(self.settings.shapefile_dir.glob("*.shp")):
-            self.console.info(f"Indexing {shapefile.name}...")
-            run_command(["shapeindex", str(shapefile)])
-
-        self.console.info(
-            f"Spatial index creation complete ({format_elapsed(step_start)})"
-        )
 
     def convert_geojson(self) -> None:
         step_start = self._start_step("Converting to GeoJSON (EPSG:4326)")

@@ -184,8 +184,6 @@ def test_run_executes_pipeline_stages_in_order_and_creates_directories(
         "download",
         "filter",
         "merge",
-        "convert_shapefiles",
-        "create_indexes",
         "convert_geojson",
         "normalize_geojson",
         "build_platform_reference_layer",
@@ -205,7 +203,6 @@ def test_run_executes_pipeline_stages_in_order_and_creates_directories(
     assert settings.sources_dir.is_dir()
     assert settings.overpass_cache_dir.is_dir()
     assert settings.filtered_sources_dir.is_dir()
-    assert settings.shapefile_dir.is_dir()
     assert settings.geojson_dir.is_dir()
     assert settings.deliverables_dir.is_dir()
     assert settings.intermediate_tiles_dir.is_dir()
@@ -215,8 +212,6 @@ def test_run_executes_pipeline_stages_in_order_and_creates_directories(
         "download",
         "filter",
         "merge",
-        "convert_shapefiles",
-        "create_indexes",
         "convert_geojson",
         "normalize_geojson",
         "build_platform_reference_layer",
@@ -239,8 +234,6 @@ def test_run_generation_stages_preserves_declared_stage_order(tmp_path) -> None:
         "download",
         "filter",
         "merge",
-        "convert_shapefiles",
-        "create_indexes",
         "convert_geojson",
         "normalize_geojson",
         "build_platform_reference_layer",
@@ -261,8 +254,6 @@ def test_run_generation_stages_preserves_declared_stage_order(tmp_path) -> None:
         "download",
         "filter",
         "merge",
-        "convert_shapefiles",
-        "create_indexes",
         "convert_geojson",
         "normalize_geojson",
         "build_platform_reference_layer",

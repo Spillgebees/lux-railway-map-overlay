@@ -1,0 +1,12 @@
+# the generator image builds from ./scripts, so the repository root
+# .dockerignore does not apply here
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.venv/
+**/tests/
+**/data/
+**/*.md
+.dockerignore

@@ -20,6 +20,10 @@ RUN git clone --depth 1 --branch "${TIPPECANOE_VERSION}" https://github.com/felt
 
 FROM python:3.14-slim-trixie@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4
 
+LABEL org.opencontainers.image.source="https://github.com/Spillgebees/lux-railway-map-overlay" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.description="Generates railway vector tiles and a GeoPackage for Luxembourg from OpenStreetMap data"
+
 WORKDIR /scripts
 
 RUN apt-get update \
@@ -40,10 +44,22 @@ COPY --from=tippecanoe-builder /usr/local/bin/tile-join /usr/local/bin/tile-join
 COPY generator /scripts/generator
 COPY osmconf.ini /scripts/osmconf.ini
 
-# ogr2ogr's OSM driver writes temp node-cache files to the current
-# working directory; /tmp is world-writable so non-root users can write
-WORKDIR /tmp
+# uid/gid match docker-compose.yml's LOCAL_UID/LOCAL_GID defaults; compose
+# can still run as any other uid. /data is pre-created so a fresh named
+# volume is writable by this user.
+RUN groupadd --gid 1000 generator \
+    && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /tmp \
+    --shell /usr/sbin/nologin generator \
+    && mkdir /data \
+    && chown 1000:1000 /data
 
-ENV PYTHONPATH=/scripts
+# ogr2ogr's OSM driver writes temp node-cache files to the current
+# working directory; /tmp is world-writable, so any uid can write there
+WORKDIR /tmp
+USER 1000:1000
+
+# the generator defaults --output-dir to $OUTPUT_DIR, so custom arguments
+# such as `--countries lu` still write to the mounted volume
+ENV PYTHONPATH=/scripts \
+    OUTPUT_DIR=/data
 ENTRYPOINT ["python3", "-m", "generator"]
-CMD ["--countries", "lu,be,de,fr", "--output-dir", "/data"]

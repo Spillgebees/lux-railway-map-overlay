@@ -9,7 +9,7 @@ REPOSITORY_ROOT = Path(__file__).parents[2]
 sys.path.insert(0, str(REPOSITORY_ROOT / "scripts"))
 
 from generator import platform_references
-from generator.layer_specs import GEOJSON_LAYER_SPECS, SHAPEFILE_LAYER_SPECS
+from generator.layer_specs import GEOJSON_LAYER_SPECS
 
 ACTIVE_RAIL_TRACK_LAYER_IDS = {
     "railway-line-rail",
@@ -229,11 +229,9 @@ def test_geojson_layer_specs_keep_preserved_tracks_in_rendered_track_layer() -> 
     assert "'preserved'" not in lifecycle_sql
 
 
-def test_shapefile_active_track_sql_includes_all_rendered_active_modes() -> None:
+def test_geojson_active_track_sql_includes_all_rendered_active_modes() -> None:
     # arrange
-    shapefile_sql_by_file = {
-        file_name: sql for file_name, _, sql in SHAPEFILE_LAYER_SPECS
-    }
+    sql_by_layer = {layer_name: sql for layer_name, sql, _ in GEOJSON_LAYER_SPECS}
     expected_railway_values = {
         "rail",
         "light_rail",
@@ -247,7 +245,7 @@ def test_shapefile_active_track_sql_includes_all_rendered_active_modes() -> None
     }
 
     # act
-    active_track_sql = shapefile_sql_by_file["rail_tracks.shp"]
+    active_track_sql = sql_by_layer["rail_tracks"]
 
     # assert
     for railway_value in expected_railway_values:
@@ -338,24 +336,18 @@ def test_viewer_route_toggle_targets_every_route_style_layer() -> None:
     assert not missing_route_layers
 
 
-def test_geojson_lifecycle_sql_matches_shapefile_razed_schema() -> None:
+def test_geojson_lifecycle_sql_includes_razed_tracks() -> None:
     # arrange
     geojson_sql_by_layer = {
         layer_name: sql for layer_name, sql, _ in GEOJSON_LAYER_SPECS
     }
-    shapefile_sql_by_file = {
-        file_name: sql for file_name, _, sql in SHAPEFILE_LAYER_SPECS
-    }
 
     # act
     geojson_lifecycle_sql = geojson_sql_by_layer["rail_tracks_lifecycle"]
-    shapefile_lifecycle_sql = shapefile_sql_by_file["rail_tracks_lifecycle.shp"]
 
     # assert
     assert "'razed'" in geojson_lifecycle_sql
-    assert "'razed'" in shapefile_lifecycle_sql
     assert "razed_railway IN" in geojson_lifecycle_sql
-    assert "razed_railway IN" in shapefile_lifecycle_sql
 
 
 def test_lifecycle_sql_keeps_razed_support_without_non_track_namespaced_values() -> (
@@ -365,25 +357,18 @@ def test_lifecycle_sql_keeps_razed_support_without_non_track_namespaced_values()
     geojson_sql_by_layer = {
         layer_name: sql for layer_name, sql, _ in GEOJSON_LAYER_SPECS
     }
-    shapefile_sql_by_file = {
-        file_name: sql for file_name, _, sql in SHAPEFILE_LAYER_SPECS
-    }
 
     # act
-    lifecycle_sql_queries = [
-        geojson_sql_by_layer["rail_tracks_lifecycle"],
-        shapefile_sql_by_file["rail_tracks_lifecycle.shp"],
-    ]
+    lifecycle_sql = geojson_sql_by_layer["rail_tracks_lifecycle"]
 
     # assert
-    for lifecycle_sql in lifecycle_sql_queries:
-        assert (
-            "railway IN ('construction','proposed','disused','abandoned','razed')"
-            in lifecycle_sql
-        )
-        assert "razed_railway IN" in lifecycle_sql
-        assert "'platform'" not in lifecycle_sql
-        assert "'turntable'" not in lifecycle_sql
+    assert (
+        "railway IN ('construction','proposed','disused','abandoned','razed')"
+        in lifecycle_sql
+    )
+    assert "razed_railway IN" in lifecycle_sql
+    assert "'platform'" not in lifecycle_sql
+    assert "'turntable'" not in lifecycle_sql
 
 
 def test_vscode_run_viewer_task_uses_packaged_blazor_map_dependency() -> None:

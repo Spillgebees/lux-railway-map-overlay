@@ -34,7 +34,7 @@ lux-railway-map-overlay/
 
 ## Demo Flow
 
-1. `LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm generate`: generate data (custom arguments replace the defaults, so include `--output-dir /data`)
+1. `LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose --profile generate run --rm generate`: generate data (append e.g. `--countries lu` for a smaller run)
 2. `docker compose up`: start Martin tile server
 3. `cd viewer && dotnet run --project RailwayViewer.csproj`: start Blazor demo viewer
 4. Browse to the URL shown by `dotnet run`

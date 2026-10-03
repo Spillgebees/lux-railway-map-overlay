@@ -7,41 +7,6 @@ RAIL_TRACK_MODE_SQL_VALUES = (
 
 ACTIVE_RAIL_TRACK_SQL_VALUES = RAIL_TRACK_MODE_SQL_VALUES + ",'preserved'"
 
-# (output_filename, human_label, sql_query)
-SHAPEFILE_LAYER_SPECS = (
-    (
-        "rail_tracks.shp",
-        "rail_tracks (active and preserved railway tracks)",
-        f"SELECT * FROM lines WHERE railway IN ({ACTIVE_RAIL_TRACK_SQL_VALUES})",
-    ),
-    (
-        "rail_tracks_lifecycle.shp",
-        "rail_tracks_lifecycle (construction, proposed, disused, abandoned, razed)",
-        "SELECT * FROM lines WHERE railway IN "
-        "('construction','proposed','disused','abandoned','razed') "
-        f"OR construction_railway IN ({RAIL_TRACK_MODE_SQL_VALUES}) "
-        f"OR proposed_railway IN ({RAIL_TRACK_MODE_SQL_VALUES}) "
-        f"OR disused_railway IN ({RAIL_TRACK_MODE_SQL_VALUES}) "
-        f"OR abandoned_railway IN ({RAIL_TRACK_MODE_SQL_VALUES}) "
-        f"OR razed_railway IN ({RAIL_TRACK_MODE_SQL_VALUES})",
-    ),
-    (
-        "rail_stops.shp",
-        "rail_stops (station, halt, tram_stop)",
-        "SELECT * FROM points WHERE railway IN ('station','halt','tram_stop')",
-    ),
-    (
-        "rail_crossings.shp",
-        "rail_crossings (level_crossing, crossing)",
-        "SELECT * FROM points WHERE railway IN ('level_crossing','crossing')",
-    ),
-    (
-        "rail_areas.shp",
-        "rail_areas (all polygons with railway tag)",
-        "SELECT * FROM multipolygons WHERE railway IS NOT NULL",
-    ),
-)
-
 # (layer_name, sql_query, per_layer_extra_ogr2ogr_args)
 GEOJSON_LAYER_SPECS = (
     (

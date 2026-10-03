@@ -1,12 +1,24 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
-from generator.config import GEOFABRIK_URLS, SUPPORTED_COUNTRIES_TEXT, Settings
+from generator.config import (
+    DEFAULT_COUNTRIES_TEXT,
+    DEFAULT_OUTPUT_DIR,
+    GEOFABRIK_URLS,
+    OUTPUT_DIR_ENV_VAR,
+    SUPPORTED_COUNTRIES_TEXT,
+    Settings,
+)
 from generator.console import Console
 from generator.pipeline import GeneratorPipeline, PipelineError
+
+
+def default_output_dir() -> str:
+    return os.environ.get(OUTPUT_DIR_ENV_VAR) or DEFAULT_OUTPUT_DIR
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -16,13 +28,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--countries",
-        required=True,
-        help=f"Comma-separated country codes. Supported: {SUPPORTED_COUNTRIES_TEXT}",
+        default=DEFAULT_COUNTRIES_TEXT,
+        help=(
+            "Comma-separated country codes. "
+            f"Supported: {SUPPORTED_COUNTRIES_TEXT} (default: {DEFAULT_COUNTRIES_TEXT})"
+        ),
     )
     parser.add_argument(
         "--output-dir",
-        default="./data",
-        help="Output directory (default: ./data)",
+        default=default_output_dir(),
+        help=(
+            f"Output directory (default: ${OUTPUT_DIR_ENV_VAR} if set, "
+            f"otherwise {DEFAULT_OUTPUT_DIR})"
+        ),
     )
     parser.add_argument(
         "--allow-missing-routes",
@@ -38,7 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
 def parse_countries(raw_value: str) -> tuple[str, ...]:
     countries = tuple(code.strip() for code in raw_value.split(",") if code.strip())
     if not countries:
-        raise PipelineError("--countries is required")
+        raise PipelineError("--countries must list at least one country code")
 
     invalid = [code for code in countries if code not in GEOFABRIK_URLS]
     if invalid:
