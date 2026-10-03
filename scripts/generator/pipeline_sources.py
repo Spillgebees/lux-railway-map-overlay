@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 import shutil
-import urllib.error
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from generator.pipeline_support import PipelineError
+from generator.pipeline_support import (
+    Downloader,
+    Logger,
+    PipelineError,
+    describe_error,
+    download_record_path,
+    is_verified_download,
+    part_path_for,
+)
 
 # Selects latest/current state from OSM history files.
 OSM_TIME_FILTER_END_DATE = "2100-01-01T00:00:00Z"
@@ -70,11 +77,18 @@ def download_sources(
     country_urls: dict[str, str],
     country_names: dict[str, str],
     *,
-    downloader,
-    info,
-    warn,
+    downloader: Downloader,
+    info: Logger,
+    warn: Logger,
     skip_codes: frozenset[str] = frozenset(),
 ) -> None:
+    """Download country extracts that are not already cached and verified.
+
+    ``downloader`` must only create ``output_path`` once the file is complete
+    and verified (see ``pipeline_support.download_file``). A cached file is
+    reused only if ``is_verified_download`` accepts it; anything else, such as
+    a truncated file or one without a download record, is downloaded again.
+    """
     tasks = []
     for code in countries:
         if code in skip_codes:
@@ -85,9 +99,14 @@ def download_sources(
         filename = source_filename(url)
         output_path = source_download_path(sources_dir, url)
 
-        if output_path.exists() and output_path.stat().st_size > 0:
+        if is_verified_download(output_path):
             warn(f"Skipping {country_names[code]} - {filename} already exists")
             continue
+        if output_path.exists():
+            warn(
+                f"Discarding cached {filename} - incomplete or unverified, "
+                "downloading again"
+            )
 
         tasks.append((code, url, filename, output_path))
 
@@ -96,13 +115,16 @@ def download_sources(
 
     def _download_one(code, url, filename, output_path):
         output_path.unlink(missing_ok=True)
+        download_record_path(output_path).unlink(missing_ok=True)
         info(f"Downloading {country_names[code]} ({filename})...")
         try:
             downloader(url, output_path)
-        except urllib.error.URLError as error:
+        except (PipelineError, OSError) as error:
+            # URLError, TimeoutError and ConnectionError are OSError subclasses
             output_path.unlink(missing_ok=True)
+            part_path_for(output_path).unlink(missing_ok=True)
             raise PipelineError(
-                f"Failed to download {country_names[code]}: {error.reason}"
+                f"Failed to download {country_names[code]}: {describe_error(error)}"
             ) from error
         info(f"Downloaded {country_names[code]}")
 

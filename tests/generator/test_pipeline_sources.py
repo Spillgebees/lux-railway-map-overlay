@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import urllib.error
 
 import pytest
 
-from generator.pipeline_support import PipelineError
+from generator.pipeline_support import (
+    PipelineError,
+    download_record_path,
+    part_path_for,
+)
 from generator.pipeline_sources import (
     build_filter_command,
     build_merge_command,
@@ -16,6 +22,14 @@ from generator.pipeline_sources import (
     source_download_path,
     source_filename,
 )
+
+
+def write_download_record(path) -> None:
+    data = path.read_bytes()
+    download_record_path(path).write_text(
+        json.dumps({"size": len(data), "md5": hashlib.md5(data).hexdigest()}),
+        encoding="utf-8",
+    )
 
 
 def test_source_helpers_build_expected_paths(tmp_path) -> None:
@@ -79,10 +93,11 @@ def test_download_sources_skips_existing_and_cleans_up_failed_download(
     warn_messages: list[str] = []
     existing_path = tmp_path / "luxembourg-latest.osm.pbf"
     existing_path.write_bytes(b"already-there")
+    write_download_record(existing_path)
 
     def downloader(url: str, output_path) -> None:
         if "belgium" in url:
-            output_path.write_bytes(b"partial")
+            part_path_for(output_path).write_bytes(b"partial")
             raise urllib.error.URLError("network down")
 
     with pytest.raises(
@@ -106,6 +121,91 @@ def test_download_sources_skips_existing_and_cleans_up_failed_download(
     ]
     assert info_messages == ["Downloading Belgium (belgium-latest.osm.pbf)..."]
     assert not (tmp_path / "belgium-latest.osm.pbf").exists()
+    assert not (tmp_path / "belgium-latest.osm.pbf.part").exists()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [TimeoutError("read timed out"), ConnectionResetError("connection reset")],
+)
+def test_download_sources_wraps_non_urlerror_failures(tmp_path, error) -> None:
+    # arrange
+    def downloader(url: str, output_path) -> None:
+        raise error
+
+    # act / assert
+    with pytest.raises(PipelineError, match=r"Failed to download Luxembourg"):
+        download_sources(
+            ["lu"],
+            tmp_path,
+            {"lu": "https://example.test/luxembourg-latest.osm.pbf"},
+            {"lu": "Luxembourg"},
+            downloader=downloader,
+            info=lambda message: None,
+            warn=lambda message: None,
+        )
+
+
+def test_download_sources_redownloads_truncated_cached_file(tmp_path) -> None:
+    # arrange
+    cached_path = tmp_path / "luxembourg-latest.osm.pbf"
+    cached_path.write_bytes(b"complete-file")
+    write_download_record(cached_path)
+    with open(cached_path, "r+b") as handle:
+        handle.truncate(4)
+    downloads: list[str] = []
+    warn_messages: list[str] = []
+
+    def downloader(url: str, output_path) -> None:
+        downloads.append(url)
+        output_path.write_bytes(b"complete-file")
+        write_download_record(output_path)
+
+    # act
+    download_sources(
+        ["lu"],
+        tmp_path,
+        {"lu": "https://example.test/luxembourg-latest.osm.pbf"},
+        {"lu": "Luxembourg"},
+        downloader=downloader,
+        info=lambda message: None,
+        warn=warn_messages.append,
+    )
+
+    # assert
+    assert downloads == ["https://example.test/luxembourg-latest.osm.pbf"]
+    assert warn_messages == [
+        "Discarding cached luxembourg-latest.osm.pbf - incomplete or unverified, "
+        "downloading again"
+    ]
+    assert cached_path.read_bytes() == b"complete-file"
+
+
+def test_download_sources_redownloads_cached_file_without_record(tmp_path) -> None:
+    # arrange
+    cached_path = tmp_path / "luxembourg-latest.osm.pbf"
+    cached_path.write_bytes(b"legacy-or-partial")
+    downloads: list[str] = []
+
+    def downloader(url: str, output_path) -> None:
+        downloads.append(url)
+        output_path.write_bytes(b"fresh")
+        write_download_record(output_path)
+
+    # act
+    download_sources(
+        ["lu"],
+        tmp_path,
+        {"lu": "https://example.test/luxembourg-latest.osm.pbf"},
+        {"lu": "Luxembourg"},
+        downloader=downloader,
+        info=lambda message: None,
+        warn=lambda message: None,
+    )
+
+    # assert
+    assert downloads == ["https://example.test/luxembourg-latest.osm.pbf"]
+    assert cached_path.read_bytes() == b"fresh"
 
 
 def test_filter_sources_runs_command_and_reports_size(tmp_path) -> None:

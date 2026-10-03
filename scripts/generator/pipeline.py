@@ -141,7 +141,9 @@ class GeneratorPipeline:
             self.settings.sources_dir,
             GEOFABRIK_URLS,
             COUNTRY_NAMES,
-            downloader=download_file,
+            downloader=lambda url, output_path: download_file(
+                url, output_path, warn=self.console.warn
+            ),
             info=self.console.info,
             warn=self.console.warn,
             skip_codes=already_filtered,
