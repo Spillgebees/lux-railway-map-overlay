@@ -63,7 +63,7 @@ def check_required_tools(tool_names: Iterable[str]) -> None:
         raise PipelineError(f"Missing required tool(s): {', '.join(missing_tools)}")
 
 
-def load_geojson(path: Path) -> dict[str, object]:
+def load_geojson(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"type": "FeatureCollection", "features": []}
     return json.loads(path.read_text(encoding="utf-8"))

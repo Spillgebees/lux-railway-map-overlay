@@ -1,7 +1,8 @@
 import math
 import re
+from collections.abc import Hashable, Sequence
 
-from shapely.geometry import GeometryCollection, LineString, MultiLineString
+from shapely.geometry import LineString, MultiLineString
 
 FALLBACK_DISPLAY_ROUTE_COLOR = "#5B6675"
 WEB_MERCATOR_RADIUS = 6378137.0
@@ -71,7 +72,7 @@ def _project_coordinate_to_web_mercator(coordinate: list[float]) -> tuple[float,
 
 
 def _unproject_coordinate_from_web_mercator(
-    coordinate: tuple[float, float],
+    coordinate: Sequence[float],
 ) -> list[float]:
     x, y = coordinate
     lon = math.degrees(x / WEB_MERCATOR_RADIUS)
@@ -137,7 +138,9 @@ def _offset_segment_for_display(
     if source_line.length < 1e-6:
         return [coords]
 
-    offset_line = source_line.offset_curve(offset_meters, join_style=1, quad_segs=8)
+    offset_line = source_line.offset_curve(
+        offset_meters, join_style="round", quad_segs=8
+    )
     if offset_line.is_empty:
         return [coords]
 
@@ -146,12 +149,6 @@ def _offset_segment_for_display(
         line_geometries = [offset_line]
     elif isinstance(offset_line, MultiLineString):
         line_geometries = list(offset_line.geoms)
-    elif isinstance(offset_line, GeometryCollection):
-        line_geometries = [
-            geometry
-            for geometry in offset_line.geoms
-            if isinstance(geometry, LineString)
-        ]
 
     if not line_geometries:
         return [coords]
@@ -216,8 +213,8 @@ def _build_slot_sequence(size: int) -> list[float]:
     return slots
 
 
-def assign_route_offset_slots(
-    route_way_sets: list[set[int]], offset_group_keys: list[tuple[str, ...]]
+def assign_route_offset_slots[K: Hashable](
+    route_way_sets: list[set[int]], offset_group_keys: Sequence[K]
 ) -> list[float]:
     """Assign stable lateral offsets so overlapping route services remain legible.
 
@@ -225,7 +222,7 @@ def assign_route_offset_slots(
     remaining groups are colored with a small graph-coloring pass based on shared way
     membership so parallel services separate only when they materially overlap.
     """
-    offset_group_indices: dict[tuple[str, ...], int] = {}
+    offset_group_indices: dict[K, int] = {}
     offset_group_way_sets: list[set[int]] = []
 
     for route_index, offset_group_key in enumerate(offset_group_keys):

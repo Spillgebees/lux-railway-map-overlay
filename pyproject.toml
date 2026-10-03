@@ -9,9 +9,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "basedpyright==1.40.1",
     "pre-commit",
     "pytest",
     "ruff==0.16.10",
+    "types-shapely>=2.1.0.20260728",
 ]
 
 [build-system]
@@ -50,3 +52,9 @@ ignore = [
 ]
 # route names use en dashes as separators (route_naming.build_variant_signature)
 allowed-confusables = ["–"]
+
+[tool.basedpyright]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+include = ["scripts", "tests"]
+extraPaths = ["scripts"]

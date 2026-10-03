@@ -8,6 +8,7 @@ from generator.config import Settings
 from generator.console import Console
 from generator.pipeline import GeneratorPipeline, PipelineError
 from generator.pipeline_support import OverpassError
+from generator.pipeline_tiles import build_tile_artifacts
 
 
 def test_build_platform_reference_layer_prefers_platform_areas_and_keeps_unmatched_stop_positions(
@@ -274,17 +275,9 @@ def test_generate_vector_tiles_runs_expected_commands_in_order(
     settings.deliverables_dir.mkdir(parents=True, exist_ok=True)
     pipeline = GeneratorPipeline(settings, Console(use_color=False))
 
-    artifacts = type(
-        "Artifacts",
-        (),
-        {
-            "merged_mbtiles": settings.deliverables_dir
-            / "lux-railway-map-overlay.mbtiles",
-            "lines_mbtiles": settings.intermediate_tiles_dir / "lines.mbtiles",
-            "stations_mbtiles": settings.intermediate_tiles_dir / "stations.mbtiles",
-            "detail_mbtiles": settings.intermediate_tiles_dir / "detail.mbtiles",
-        },
-    )()
+    artifacts = build_tile_artifacts(
+        settings.intermediate_tiles_dir, settings.deliverables_dir
+    )
     calls: list[object] = []
 
     monkeypatch.setattr(

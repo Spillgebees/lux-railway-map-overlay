@@ -25,6 +25,14 @@ repos:
 
   - repo: local
     hooks:
+      # runs from the project venv so it sees the locked shapely and stubs
+      - id: basedpyright
+        name: Type-check Python with basedpyright
+        entry: uv run --locked basedpyright
+        language: system
+        types: [python]
+        pass_filenames: false
+
       - id: dotnet-tool-restore
         name: Restore .NET tools
         entry: dotnet tool restore

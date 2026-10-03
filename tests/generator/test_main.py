@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -16,7 +17,7 @@ def test_parse_countries_rejects_unknown_codes() -> None:
 
 
 def test_main_returns_zero_and_passes_settings(monkeypatch, tmp_path) -> None:
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     class FakePipeline:
         def __init__(self, settings, console) -> None:
@@ -46,7 +47,7 @@ def test_main_returns_zero_and_passes_settings(monkeypatch, tmp_path) -> None:
 
 
 def test_main_passes_allow_missing_routes_flag(monkeypatch, tmp_path) -> None:
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     class FakePipeline:
         def __init__(self, settings, console) -> None:
@@ -170,7 +171,7 @@ def test_main_keeps_env_output_dir_when_only_countries_are_passed(
     monkeypatch, tmp_path
 ) -> None:
     # arrange
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     class FakePipeline:
         def __init__(self, settings, console) -> None:

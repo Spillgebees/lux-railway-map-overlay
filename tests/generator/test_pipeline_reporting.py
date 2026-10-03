@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from generator.config import Settings
+from generator.console import Console
 from generator.pipeline_reporting import (
     log_pipeline_complete,
     log_pipeline_start,
@@ -9,8 +10,9 @@ from generator.pipeline_reporting import (
 )
 
 
-class FakeConsole:
+class FakeConsole(Console):
     def __init__(self) -> None:
+        super().__init__(use_color=False)
         self.messages: list[tuple[str, str]] = []
 
     def step(self, message: str) -> None:

@@ -1,6 +1,7 @@
 import heapq
 import math
 import re
+from typing import Any
 
 from generator.route_naming import iter_station_aliases, normalize_text
 
@@ -32,7 +33,7 @@ _SEGMENT_SIMILARITY_THRESHOLD_DEG = 0.05
 
 
 def build_station_indexes(
-    stations_geojson: dict[str, object],
+    stations_geojson: dict[str, Any],
     bbox: str,
 ) -> tuple[set[str], dict[str, list[list[float]]]]:
     """Build both the Luxembourg station name set and the station match index in one pass."""
@@ -64,7 +65,7 @@ def build_station_indexes(
 
 
 def build_luxembourg_station_names(
-    stations_geojson: dict[str, object],
+    stations_geojson: dict[str, Any],
     bbox: str,
 ) -> set[str]:
     """Collect normalized station aliases that fall inside the Luxembourg bbox.
@@ -78,7 +79,7 @@ def build_luxembourg_station_names(
 
 
 def build_station_match_index(
-    stations_geojson: dict[str, object],
+    stations_geojson: dict[str, Any],
 ) -> dict[str, list[list[float]]]:
     # Use a bbox that covers the entire world so all stations are included.
     _, match_index = build_station_indexes(stations_geojson, "-90,-180,90,180")
@@ -740,7 +741,7 @@ def _select_best_segments(
             segment_adjacency[left_index].add(right_index)
             segment_adjacency[right_index].add(left_index)
 
-    predecessor_by_index = {from_segment_index: None}
+    predecessor_by_index: dict[int, int | None] = {from_segment_index: None}
     queue = [from_segment_index]
     for current_index in queue:
         if current_index == to_segment_index:

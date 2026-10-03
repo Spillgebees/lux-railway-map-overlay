@@ -22,6 +22,11 @@ from generator.route_naming import (
     resolve_endpoints,
 )
 
+# (ref or name, sorted endpoints, variant signature, operator, network, route)
+type RouteKey = tuple[str, tuple[str, ...], str, str, str, str]
+# (ref or name, sorted endpoints, operator, network, route, colour)
+type OffsetGroupKey = tuple[str, tuple[str, ...], str, str, str, str]
+
 
 @dataclass
 class RouteCandidate:
@@ -30,7 +35,7 @@ class RouteCandidate:
     score: tuple[int, int, int]  # (point_count, metadata_count, -segment_count)
     feature: dict
     way_ids: set[int] = field(repr=False)
-    offset_group_key: tuple[str, ...] = field(repr=False)
+    offset_group_key: OffsetGroupKey = field(repr=False)
     segments: list[list[list[float]]] = field(repr=False)
 
 
@@ -68,7 +73,7 @@ def write_routes_geojson(
     )
     station_match_cache: dict[str, list[list[float]]] = {}
 
-    selected_routes: dict[tuple[str, ...], RouteCandidate] = {}
+    selected_routes: dict[RouteKey, RouteCandidate] = {}
 
     for relation in relations:
         tags = relation.get("tags", {})
@@ -92,7 +97,7 @@ def write_routes_geojson(
         # route_key: identity for deduplication; includes variant_signature
         # so branch variants (e.g., "via Wasserbillig" vs "via Trier") are
         # kept as separate routes
-        route_key = (
+        route_key: RouteKey = (
             normalize_text(ref) or normalize_text(tags.get("name", "")),
             tuple(sorted({value for value in (endpoint_from, endpoint_to) if value})),
             variant_signature,
@@ -103,7 +108,7 @@ def write_routes_geojson(
         # offset_group_key: identity for display offset grouping; excludes
         # variant_signature but includes colour, so visual duplicates share
         # a lateral offset slot while color-distinct services separate
-        offset_group_key = (
+        offset_group_key: OffsetGroupKey = (
             normalize_text(ref) or normalize_text(tags.get("name", "")),
             tuple(sorted({value for value in (endpoint_from, endpoint_to) if value})),
             normalize_text(tags.get("operator", "")),
