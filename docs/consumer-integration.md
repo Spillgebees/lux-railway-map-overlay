@@ -187,7 +187,7 @@ The style ships with some layers hidden, so a map without a toggle UI shows a re
 
 Visible by default:
 
-- Active tracks for light rail, metro, narrow gauge, funicular, monorail, and miniature railways
+- Active tracks for heavy rail, light rail, metro, narrow gauge, funicular, monorail, and miniature railways
 - Service tracks from zoom 13, and non-tram tunnels with tunnel entrance icons and labels
 - Construction, proposed, disused, abandoned, and razed tracks, except tram and light rail
 - Preserved tracks
@@ -198,7 +198,6 @@ Visible by default:
 
 Hidden by default:
 
-- `railway-line-rail`, the main active heavy rail track layer. Set its visibility to `visible` if you use the style without toggles.
 - All tram layers: lines, tunnels, lifecycle tracks, and stop icons
 - Light rail lifecycle tracks
 - Subway entrance icons

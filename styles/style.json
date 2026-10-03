@@ -74,7 +74,6 @@
 				["any", ["!", ["has", "service"]], ["==", ["get", "service"], ""]]
 			],
 			"layout": {
-				"visibility": "none",
 				"line-join": "round",
 				"line-cap": "round"
 			},
