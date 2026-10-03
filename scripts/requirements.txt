@@ -1,3 +1,0 @@
-# runtime dependencies for the Docker build context (scripts/)
-# keep in sync with [project.dependencies] in pyproject.toml
-shapely>=2.0,<3

@@ -1,0 +1,10 @@
+# BuildKit reads this file instead of the root .dockerignore when building
+# scripts/Dockerfile. The build context is the repository root, so allow only
+# the files the generator image copies.
+*
+!pyproject.toml
+!uv.lock
+!scripts/generator/
+!scripts/osmconf.ini
+**/__pycache__/
+**/*.py[cod]
