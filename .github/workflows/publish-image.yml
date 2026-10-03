@@ -6,6 +6,7 @@ on:
     paths:
       - ".dockerignore"
       - ".github/workflows/publish-image.yml"
+      - "charts/**"
       - "docker-compose.yml"
       - "scripts/**"
       - "styles/**"
@@ -17,21 +18,40 @@ on:
         type: boolean
         default: false
   schedule:
-    # monthly rebuild (1st Sunday 03:23 UTC) to pick up OSM data updates
-    - cron: "23 3 1-7 * 0"
+    # monthly rebuild (1st of the month, 03:23 UTC) to pick up OSM data updates.
+    # Setting both day-of-month and day-of-week would run on either match.
+    - cron: "23 3 1 * *"
 
-permissions:
-  contents: read
-  packages: write
+# Queue publishes instead of cancelling them: a half-finished run could leave
+# an image tag without its chart.
+concurrency:
+  group: publish-image
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  IMAGE: ghcr.io/spillgebees/lux-railway-map-overlay
+  CHART_REGISTRY: oci://ghcr.io/spillgebees/charts
+  CHART_PATH: charts/lux-railway-map-overlay
+  # renovate: datasource=github-releases depName=helm/helm
+  HELM_VERSION: v4.3.0
 
 jobs:
-  publish:
-    name: Generate, Build, and Publish
+  image:
+    name: Generate, Build, and Publish Image
     runs-on: ubuntu-latest
     if: github.repository == 'Spillgebees/lux-railway-map-overlay'
-    env:
-      COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
-      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: write # push the image
+      id-token: write # sign the provenance attestation (Sigstore OIDC)
+      attestations: write # store the attestation
+      artifact-metadata: write # create the attestation storage record
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      digest: ${{ steps.push.outputs.digest }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -47,6 +67,33 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Version: <year>.<month*100+day>.<run number>, e.g. 2026.1003.76.
+      # Valid SemVer without leading zeros, sortable, unique per run, and free
+      # of "+" so it also works as an OCI chart tag.
+      - name: Compute release version
+        id: version
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          year=$(date -u +%Y)
+          monthday=$((10#$(date -u +%m%d)))
+          version="${year}.${monthday}.${RUN_NUMBER}"
+          if [[ ! "$version" =~ ^[1-9][0-9]*\.[1-9][0-9]*\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Computed version '$version' is not valid SemVer"
+            exit 1
+          fi
+          # Re-running every job of a run reuses its run number. Refuse to
+          # overwrite a published tag; dispatch a new run instead.
+          if output=$(docker buildx imagetools inspect "${IMAGE}:${version}" 2>&1); then
+            echo "::error::${IMAGE}:${version} already exists. Start a new run instead of re-running this one."
+            exit 1
+          elif ! grep -qi "not found" <<<"$output"; then
+            echo "$output"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Release version: $version"
 
       - name: Compute cache key
         if: ${{ !inputs.fresh }}
@@ -66,7 +113,14 @@ jobs:
             pipeline-${{ steps.cache-key.outputs.month }}-
 
       - name: Build generator image
-        run: docker build -t lux-railway-generator:ci ./scripts
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: ./scripts
+          load: true
+          push: false
+          tags: lux-railway-generator:ci
+          cache-from: type=gha,scope=generator
+          cache-to: type=gha,scope=generator,mode=max
 
       - name: Generate MBTiles
         run: |
@@ -111,25 +165,97 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ env.IMAGE }}
           tags: |
+            type=raw,value=${{ steps.version.outputs.version }},priority=1000
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push runtime image
+        id: push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           file: tiles/Dockerfile
           target: bundle
           push: true
+          provenance: mode=max
+          sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # tiles/Dockerfile looks up Martin's release digest through the
+          # GitHub API. The token avoids the unauthenticated rate limit.
+          secrets: |
+            github_token=${{ github.token }}
+          cache-from: type=gha,scope=tiles
+          cache-to: type=gha,scope=tiles,mode=max
 
-      - name: Trigger Coolify deployment
-        if: env.COOLIFY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
-        continue-on-error: true
+      - name: Attest image provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+  chart:
+    name: Package and Publish Helm Chart
+    runs-on: ubuntu-latest
+    needs: image
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write # push the chart
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      # Chart.yaml in git keeps 0.0.0 placeholders. The published chart gets
+      # the release version as both version and appVersion, so its default
+      # image.tag points at the image pushed by the image job.
+      - name: Package chart
+        env:
+          VERSION: ${{ needs.image.outputs.version }}
         run: |
+          helm lint "$CHART_PATH" --set image.tag="$VERSION"
+          helm package "$CHART_PATH" \
+            --version "$VERSION" \
+            --app-version "$VERSION" \
+            --destination dist
+
+      - name: Push chart to GHCR
+        env:
+          VERSION: ${{ needs.image.outputs.version }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | helm registry login ghcr.io --username "$REGISTRY_USER" --password-stdin
+          helm push "dist/lux-railway-map-overlay-${VERSION}.tgz" "$CHART_REGISTRY"
+          helm registry logout ghcr.io
+
+  deploy:
+    name: Trigger Coolify Deployment
+    runs-on: ubuntu-latest
+    needs: image
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Trigger Coolify deployment
+        continue-on-error: true
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          if [ -z "$COOLIFY_WEBHOOK" ] || [ -z "$COOLIFY_TOKEN" ]; then
+            echo "Coolify secrets not set, skipping deployment trigger"
+            exit 0
+          fi
           response=$(curl -s -w "\n%{http_code}" \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
             "$COOLIFY_WEBHOOK")
