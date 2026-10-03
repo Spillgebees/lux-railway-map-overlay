@@ -5,7 +5,7 @@
 
 [![Validate](https://github.com/Spillgebees/lux-railway-map-overlay/actions/workflows/validate.yml/badge.svg)](https://github.com/Spillgebees/lux-railway-map-overlay/actions/workflows/validate.yml)
 [![Publish tile image](https://github.com/Spillgebees/lux-railway-map-overlay/actions/workflows/publish-image.yml/badge.svg)](https://github.com/Spillgebees/lux-railway-map-overlay/actions/workflows/publish-image.yml)
-[![GHCR](https://ghcr-badge.egpl.dev/spillgebees/lux-railway-map-overlay/latest_tag?trim=major&label=latest)](https://github.com/Spillgebees/lux-railway-map-overlay/pkgs/container/lux-railway-map-overlay)
+[![GHCR](https://ghcr-badge.egpl.dev/spillgebees/lux-railway-map-overlay/latest_tag?ignore=sha256-*,sha-*,latest&label=latest)](https://github.com/Spillgebees/lux-railway-map-overlay/pkgs/container/lux-railway-map-overlay)
 [![License](https://img.shields.io/github/license/Spillgebees/lux-railway-map-overlay)](LICENSE)
 
 `lux-railway-map-overlay` is a railway infrastructure overlay for Luxembourg, built from [OpenStreetMap](https://www.openstreetmap.org/) data and served as vector tiles by [Martin](https://maplibre.org/martin/).
