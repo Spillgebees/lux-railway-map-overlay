@@ -179,7 +179,7 @@ function toggleToken(token, visible) {
 }
 ```
 
-The demo viewer in [`viewer/Pages/Home.razor`](../viewer/Pages/Home.razor) shows one layer only when every toggle group it belongs to (family, mode, state) has at least one matching toggle switched on.
+The demo viewer builds its toggles from these lists and the per-layer tokens when it starts ([`viewer/Overlay/StyleToggleCatalog.cs`](../viewer/Overlay/StyleToggleCatalog.cs)). It draws a layer only when every token the layer carries is switched on. Each layer carries at most one token per group, so this is the same as checking family, mode, and state separately. Spillgebees.Blazor.Map 0.23.0 can hide style layers but cannot show layers that the style hides by default, so the viewer disables those toggles ([`viewer/Overlay/OverlayVisibility.cs`](../viewer/Overlay/OverlayVisibility.cs)).
 
 ## Default visibility
 

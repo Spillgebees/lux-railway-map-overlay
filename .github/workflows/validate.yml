@@ -76,6 +76,8 @@ jobs:
               - '.github/workflows/validate.yml'
             viewer:
               - 'viewer/**'
+              - 'global.json'
+              - '.csharpierrc.yaml'
               - '.config/dotnet-tools.json'
               - '.editorconfig'
               - '.github/workflows/validate.yml'
@@ -188,7 +190,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: "10.0.x"
+          global-json-file: global.json
 
       - name: Restore local .NET tools
         run: dotnet tool restore
