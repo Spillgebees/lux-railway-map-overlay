@@ -41,22 +41,38 @@ RUN chmod +x /glyphs/generate-glyphs.sh \
 FROM --platform=$BUILDPLATFORM nginxinc/nginx-unprivileged:1.30.5-alpine-slim@sha256:e28dcf0a161ddcbf228c7364b4a14f9bad4763ae8f5317c437b896afa3df4b84 AS martin
 
 ARG TARGETARCH
-# When bumping MARTIN_VERSION, update the checksums too:
-#   gh release view martin-v<version> -R maplibre/martin --json assets \
-#     -q '.assets[] | select(.name | test("linux-musl")) | .name + " " + .digest'
 # renovate: datasource=github-releases depName=maplibre/martin extractVersion=^martin-v(?<version>.*)$
 ARG MARTIN_VERSION=1.16.1
-ARG MARTIN_SHA256_AMD64=831df5399bb573a8b6bc01dbb38be5938c0e95501e715403d9eacd9143b33348
-ARG MARTIN_SHA256_ARM64=6802b55c378d6a38180d881d306f53c17ac4ebbb35893aa94204907b0f08fd1c
+
+# Build-only stage; the runtime stage switches back to 101.
+# hadolint ignore=DL3002
+USER 0
 
 WORKDIR /tmp/martin
 
-RUN case "${TARGETARCH}" in \
-    amd64) arch=x86_64; sha256="${MARTIN_SHA256_AMD64}" ;; \
-    arm64) arch=aarch64; sha256="${MARTIN_SHA256_ARM64}" ;; \
+# hadolint ignore=DL3018
+RUN apk add --no-cache jq
+
+# The expected SHA256 comes from GitHub's release asset metadata, so a
+# Renovate version bump needs no manual checksum update. Pass a token with
+# `--secret id=github_token,env=GITHUB_TOKEN` to avoid API rate limits.
+RUN --mount=type=secret,id=github_token,required=false \
+    case "${TARGETARCH}" in \
+    amd64) arch=x86_64 ;; \
+    arm64) arch=aarch64 ;; \
     *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac \
-    && wget -q -O martin.tar.gz "https://github.com/maplibre/martin/releases/download/martin-v${MARTIN_VERSION}/martin-${arch}-unknown-linux-musl.tar.gz" \
+    && asset="martin-${arch}-unknown-linux-musl.tar.gz" \
+    && if [ -s /run/secrets/github_token ]; then \
+    set -- --header "Authorization: Bearer $(cat /run/secrets/github_token)"; \
+    else set --; fi \
+    && wget -q -O release.json "$@" \
+    "https://api.github.com/repos/maplibre/martin/releases/tags/martin-v${MARTIN_VERSION}" \
+    && sha256="$(jq -er --arg name "${asset}" \
+    '.assets[] | select(.name == $name) | .digest | select(startswith("sha256:")) | ltrimstr("sha256:")' \
+    release.json)" \
+    && wget -q -O martin.tar.gz \
+    "https://github.com/maplibre/martin/releases/download/martin-v${MARTIN_VERSION}/${asset}" \
     && printf '%s  %s\n' "${sha256}" martin.tar.gz > martin.tar.gz.sha256 \
     && sha256sum -c martin.tar.gz.sha256 \
     && tar -xzf martin.tar.gz martin
