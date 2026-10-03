@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from generator.pipeline_support import ogr2ogr

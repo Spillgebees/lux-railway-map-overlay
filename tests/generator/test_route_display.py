@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from generator.route_display import (
     assign_route_offset_slots,
     geometry_from_segments,

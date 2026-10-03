@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from generator.console import Console, format_bytes, format_elapsed
 
 

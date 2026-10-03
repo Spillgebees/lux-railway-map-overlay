@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from generator.normalization import normalize_feature_collection

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 
 # squared distance threshold (~50m at Luxembourg latitude) for treating

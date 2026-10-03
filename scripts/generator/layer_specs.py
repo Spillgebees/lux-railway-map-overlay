@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 RAIL_TRACK_MODE_SQL_VALUES = (
     "'rail','light_rail','tram','subway','narrow_gauge',"
     "'monorail','funicular','miniature'"
