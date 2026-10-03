@@ -1,6 +1,24 @@
 apiVersion: v2
 name: lux-railway-map-overlay
-description: Helm chart for the Luxembourg Railway Infrastructure Vector Tile Overlay
+description: Railway infrastructure vector tile overlay for Luxembourg and its border regions, served by Martin behind nginx
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+# Placeholders. The publish workflow sets version and appVersion to the image
+# release version (for example 2026.1003.76) when it packages the chart, so
+# the published chart's default image.tag points at a real image. Install the
+# chart from oci://ghcr.io/spillgebees/charts/lux-railway-map-overlay. A
+# checkout of this file needs image.tag set explicitly.
+version: 0.0.0
+appVersion: "0.0.0"
+kubeVersion: ">=1.25.0-0"
+home: https://github.com/Spillgebees/lux-railway-map-overlay
+sources:
+  - https://github.com/Spillgebees/lux-railway-map-overlay
+keywords:
+  - railway
+  - openstreetmap
+  - vector-tiles
+  - maplibre
+  - martin
+maintainers:
+  - name: Spillgebees
+    url: https://github.com/Spillgebees

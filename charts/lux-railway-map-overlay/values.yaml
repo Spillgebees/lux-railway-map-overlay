@@ -1,7 +1,11 @@
+# More than one replica works with the default baked-in MBTiles. With a
+# ReadWriteOnce volume (persistence.enabled), keep one replica.
 replicaCount: 1
 
 image:
   repository: ghcr.io/spillgebees/lux-railway-map-overlay
+  # Defaults to the chart appVersion. The published chart sets appVersion to
+  # its release version, which is also an image tag.
   tag: ""
   pullPolicy: IfNotPresent
 
@@ -58,6 +62,8 @@ ingress:
     issuerGroup: ""
     addDefaultTls: true
 
+# External base URL written into style.json. If empty, derived from the first
+# ingress host (https:// when the ingress has TLS), else http://localhost:3000.
 publicUrl: ""
 
 env: {}
@@ -71,12 +77,18 @@ resources:
     memory: 2Gi
 
 deploymentStrategy:
-  type: Recreate
+  # Recreate or RollingUpdate. Empty picks Recreate when persistence is
+  # enabled and RollingUpdate otherwise.
+  type: ""
 
 revisionHistoryLimit: 2
 
+# The published image contains the MBTiles. Enable persistence only to serve
+# your own file from a volume mounted at /data, and set
+# env.MBTILES_PATH=/data/lux-railway-map-overlay.mbtiles, because the baked-in
+# file takes precedence.
 persistence:
-  enabled: true
+  enabled: false
   existingClaim: ""
   storageClass: ""
   accessModes:
@@ -112,6 +124,7 @@ probes:
 networkPolicy:
   enabled: true
 
+# With replicaCount 1 and minAvailable 1, the budget blocks node drains.
 podDisruptionBudget:
   enabled: false
   minAvailable: 1

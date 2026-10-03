@@ -1,4 +1,21 @@
-1. Ensure your PVC mounted at /data contains lux-railway-map-overlay.mbtiles.
-2. If you expose the service publicly, set publicUrl to the external URL so style.json advertises the correct endpoints.
-3. Retrieve the service endpoint with:
-   kubectl get svc {{ include "lux-railway-map-overlay.fullname" . }} -n {{ .Release.Namespace }}
+Image: {{ .Values.image.repository }}:{{ include "lux-railway-map-overlay.imageTag" . }}
+Public URL: {{ include "lux-railway-map-overlay.publicUrl" . }}
+{{- if .Values.persistence.enabled }}
+
+The MBTiles volume is mounted at /data. The image's baked-in MBTiles take
+precedence unless env.MBTILES_PATH points at the file on the volume.
+{{- if gt (int .Values.replicaCount) 1 }}
+replicaCount is {{ .Values.replicaCount }}. Pods on different nodes cannot all mount a ReadWriteOnce volume.
+{{- end }}
+{{- end }}
+{{- if and .Values.podDisruptionBudget.enabled (le (int .Values.replicaCount) 1) }}
+
+The PodDisruptionBudget with a single replica blocks voluntary evictions such as node drains.
+{{- end }}
+{{- if not .Values.publicUrl }}
+
+publicUrl is not set, so style.json uses the derived URL above. Set publicUrl if clients reach the server under another URL.
+{{- end }}
+
+Get the service:
+  kubectl get svc {{ include "lux-railway-map-overlay.fullname" . }} -n {{ .Release.Namespace }}
