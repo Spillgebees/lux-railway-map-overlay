@@ -6,7 +6,7 @@ These notes describe the Python generator in `scripts/generator/`: how to run it
 
 The Docker route needs nothing but Docker. It is described in the [README](../README.md#generate-the-data-yourself).
 
-To run without Docker, install Python 3.13 or newer and put these tools on your `PATH`:
+To run without Docker, install Python 3.14 or newer and put these tools on your `PATH`:
 
 | Tool                                                             | Used for                                                       |
 | ---------------------------------------------------------------- | -------------------------------------------------------------- |
@@ -166,7 +166,7 @@ dotnet tool restore && dotnet csharpier check viewer
 Two workflows run in GitHub Actions:
 
 - `validate.yml` runs on pull requests and on pushes to `main` that touch the generator, tests, styles, tile server, viewer, or workflows. It runs actionlint, Black, pytest, and CSharpier, and builds the generator and tile server images without pushing them. It does not download extracts or call Overpass.
-- `publish-image.yml` runs on pushes to `main` that touch the generator, styles, tile server, or Compose file, once a month on a schedule, and on manual dispatch. It generates the full dataset, fails if either route GeoJSON file is empty, builds `tiles/Dockerfile.bundle` with the MBTiles baked in, and pushes `latest` and `sha-<commit>` tags to GHCR. It caches `data/cache/overpass/` and `data/intermediate/sources/` per calendar month. A manual run with `fresh` enabled skips that cache.
+- `publish-image.yml` runs on pushes to `main` that touch the generator, styles, tile server, or Compose file, once a month on a schedule, and on manual dispatch. It generates the full dataset, fails if either route GeoJSON file is empty, builds the `bundle` target of `tiles/Dockerfile` with the MBTiles baked in, and pushes `latest` and `sha-<commit>` tags to GHCR. It caches `data/cache/overpass/` and `data/intermediate/sources/` per calendar month. A manual run with `fresh` enabled skips that cache.
 
 Together, strict route extraction and the route check in `publish-image.yml` stop a route regression from reaching a published image.
 

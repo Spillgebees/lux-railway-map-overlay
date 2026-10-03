@@ -4,12 +4,12 @@ This guide covers running the tile server: the container image, its configuratio
 
 ## What runs in the container
 
-The tile server image runs two processes. Martin serves tiles, TileJSON, sprites, and health on `127.0.0.1:3001`. nginx listens on port `8080`, serves the style and glyphs itself, and proxies everything else to Martin. The container runs as the unprivileged user `101:101`.
+The tile server image runs two processes. Martin serves tiles, TileJSON, sprites, and health on `127.0.0.1:3001`. nginx listens on port `8080`, serves the style and glyphs itself, and proxies everything else to Martin. The container runs as the unprivileged user `101:101`. The image is based on `nginxinc/nginx-unprivileged` (Alpine) and adds Martin's statically linked musl release binary.
 
-There are two images:
+`tiles/Dockerfile` has two targets:
 
-- The published image, `ghcr.io/spillgebees/lux-railway-map-overlay`, is built from `tiles/Dockerfile.bundle` and contains the generated MBTiles.
-- The local image, built by `docker compose up` from `tiles/Dockerfile`, contains no data. It reads the MBTiles from the `./data` mount.
+- `bundle` builds the published image, `ghcr.io/spillgebees/lux-railway-map-overlay`, with the generated MBTiles baked in.
+- `runtime` is the image `docker compose up` builds. It contains no data. It reads the MBTiles from the `./data` mount.
 
 Published tags are `latest` for the newest build from `main` and `sha-<commit>` for a specific build. Pin a `sha-` tag if you need reproducible deployments.
 
