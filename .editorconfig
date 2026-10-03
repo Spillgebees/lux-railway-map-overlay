@@ -257,7 +257,9 @@ dotnet_diagnostic.CA1847.severity = warning
 dotnet_diagnostic.CA1852.severity = warning
 
 # CA2007: Consider calling ConfigureAwait on the awaited task
-dotnet_diagnostic.CA2007.severity = warning
+# Off: the only C# here is the Blazor viewer, where awaits should resume on the
+# renderer's context, so ConfigureAwait(false) would be wrong.
+dotnet_diagnostic.CA2007.severity = none
 
 # CA2008: Do not create tasks without passing a TaskScheduler
 dotnet_diagnostic.CA2008.severity = warning
