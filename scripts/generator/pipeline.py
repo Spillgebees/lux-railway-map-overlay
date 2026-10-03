@@ -27,7 +27,12 @@ from generator.pipeline_reporting import (
     print_pipeline_summary,
     start_step,
 )
-from generator.pipeline_sources import download_sources, filter_sources, merge_sources
+from generator.pipeline_sources import (
+    download_sources,
+    filter_sources,
+    filtered_source_path,
+    merge_sources,
+)
 from generator.pipeline_support import (
     OverpassError,
     PipelineError,
@@ -130,11 +135,15 @@ class GeneratorPipeline:
         step_start = self._start_step("Downloading PBF files from Geofabrik")
 
         # skip downloading countries whose filtered railway PBFs are already
-        # cached from a previous run (e.g., restored by CI cache)
+        # cached from a previous run (e.g., restored by CI cache); filter_sources
+        # only creates these once osmium has finished
         already_filtered = frozenset(
             code
             for code in self.settings.countries
-            if (self.settings.filtered_sources_dir / f"{code}-railway.osm.pbf").exists()
+            if (
+                path := filtered_source_path(self.settings.filtered_sources_dir, code)
+            ).exists()
+            and path.stat().st_size > 0
         )
 
         download_sources(

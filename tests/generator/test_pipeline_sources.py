@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import urllib.error
+from pathlib import Path
 
 import pytest
 
@@ -216,8 +217,7 @@ def test_filter_sources_runs_command_and_reports_size(tmp_path) -> None:
 
     def runner(command: list[str]) -> None:
         calls.append(command)
-        (tmp_path / "filtered").mkdir(exist_ok=True)
-        (tmp_path / "filtered" / "lu-railway.osm.pbf").write_bytes(b"filtered-output")
+        Path(command[command.index("-o") + 1]).write_bytes(b"filtered-output")
 
     filter_sources(
         ["lu"],
@@ -232,12 +232,44 @@ def test_filter_sources_runs_command_and_reports_size(tmp_path) -> None:
     )
 
     assert calls == [
-        build_filter_command(input_path, tmp_path / "filtered" / "lu-railway.osm.pbf")
+        build_filter_command(
+            input_path, tmp_path / "filtered" / "lu-railway.part.osm.pbf"
+        )
     ]
     assert messages == [
         "Filtering Luxembourg...",
         "Filtered Luxembourg -> 15B",
     ]
+    assert (tmp_path / "filtered" / "lu-railway.osm.pbf").read_bytes() == (
+        b"filtered-output"
+    )
+    assert not (tmp_path / "filtered" / "lu-railway.part.osm.pbf").exists()
+
+
+def test_filter_sources_leaves_no_output_when_filter_fails(tmp_path) -> None:
+    # arrange
+    (tmp_path / "luxembourg-latest.osm.pbf").write_bytes(b"truncated")
+
+    def runner(command: list[str]) -> None:
+        Path(command[command.index("-o") + 1]).write_bytes(b"half-written")
+        raise PipelineError("osmium failed")
+
+    # act
+    with pytest.raises(PipelineError, match=r"osmium failed"):
+        filter_sources(
+            ["lu"],
+            tmp_path,
+            tmp_path / "filtered",
+            {"lu": "https://example.test/luxembourg-latest.osm.pbf"},
+            {"lu": "Luxembourg"},
+            runner=runner,
+            info=lambda message: None,
+            warn=lambda message: None,
+            size_formatter=lambda size: f"{size}B",
+        )
+
+    # assert
+    assert list((tmp_path / "filtered").iterdir()) == []
 
 
 def test_merge_sources_copies_single_country_and_runs_merge_for_multiple(

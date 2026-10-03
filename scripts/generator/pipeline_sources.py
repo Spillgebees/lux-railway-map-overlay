@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import http.client
+import os
 import shutil
 import urllib.parse
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from generator.pipeline_support import (
+    CommandRunner,
     Downloader,
     Logger,
     PipelineError,
@@ -30,6 +33,13 @@ def source_download_path(sources_dir: Path, url: str) -> Path:
 
 def filtered_source_path(filtered_sources_dir: Path, country_code: str) -> Path:
     return filtered_sources_dir / f"{country_code}-railway.osm.pbf"
+
+
+def filtered_source_partial_path(output_path: Path) -> Path:
+    # keep the .osm.pbf suffix so osmium still infers the output format
+    return output_path.with_name(
+        output_path.name.removesuffix(".osm.pbf") + ".part.osm.pbf"
+    )
 
 
 def build_filter_command(input_path: Path, output_path: Path) -> list[str]:
@@ -143,11 +153,18 @@ def filter_sources(
     country_urls: dict[str, str],
     country_names: dict[str, str],
     *,
-    runner,
-    info,
-    warn,
-    size_formatter,
+    runner: CommandRunner,
+    info: Logger,
+    warn: Logger,
+    size_formatter: Callable[[int], str],
 ) -> None:
+    """Extract railway features per country.
+
+    osmium writes to a temporary file that is renamed into place only after it
+    succeeds, so an interrupted filter never leaves a partial
+    ``<code>-railway.osm.pbf`` that later runs would reuse (and that would make
+    them skip the download step).
+    """
     filtered_sources_dir.mkdir(parents=True, exist_ok=True)
 
     to_filter = []
@@ -168,8 +185,13 @@ def filter_sources(
         if not input_path.exists():
             raise PipelineError(f"Source file not found: {input_path}")
 
+        partial_path = filtered_source_partial_path(output_path)
         info(f"Filtering {country_names[code]}...")
-        runner(build_filter_command(input_path, output_path))
+        try:
+            runner(build_filter_command(input_path, partial_path))
+            os.replace(partial_path, output_path)
+        finally:
+            partial_path.unlink(missing_ok=True)
         info(
             f"Filtered {country_names[code]} -> {size_formatter(output_path.stat().st_size)}"
         )
