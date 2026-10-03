@@ -125,11 +125,12 @@ jobs:
       - name: Generate MBTiles
         run: |
           mkdir -p data
+          # run as the runner user so the restored cache and outputs stay writable
           docker run --rm \
+            --user "$(id -u):$(id -g)" \
             -v "$PWD/data:/data" \
             lux-railway-generator:ci \
-            --countries lu,be,de,fr \
-            --output-dir /data
+            --countries lu,be,de,fr
 
       - name: Save generator cache
         if: ${{ !inputs.fresh }}
