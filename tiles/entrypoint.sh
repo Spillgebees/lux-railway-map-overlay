@@ -97,7 +97,20 @@ supervise() {
     local status=0
     local name
 
-    wait -n -p exited_pid "${MARTIN_PID}" "${NGINX_PID}" || status=$?
+    # Checks both children once a second. The sleep runs in the background so
+    # the INT/TERM traps fire straight away.
+    while kill -0 "${MARTIN_PID}" 2>/dev/null && kill -0 "${NGINX_PID}" 2>/dev/null; do
+        sleep 1 &
+        wait "$!" || true
+    done
+
+    if kill -0 "${MARTIN_PID}" 2>/dev/null; then
+        exited_pid="${NGINX_PID}"
+    else
+        exited_pid="${MARTIN_PID}"
+    fi
+
+    wait "${exited_pid}" || status=$?
 
     case "${exited_pid}" in
     "${MARTIN_PID}") name="Martin" ;;
