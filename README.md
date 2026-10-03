@@ -118,9 +118,10 @@ dotnet tool restore
 .venv/bin/black --check scripts tests
 .venv/bin/pytest
 dotnet csharpier check viewer
+dotnet build viewer/RailwayViewer.slnx -warnaserror
 ```
 
-`.venv/bin/pre-commit install` sets up the same checks as Git hooks, plus actionlint. `.vscode/tasks.json` has tasks for generating data, starting the tile server, running the viewer, and running the checks.
+CI also validates the style, the Helm chart, shell scripts, and JSON and CSS formatting; the [developer pipeline notes](docs/developer-pipeline.md#checks-and-ci) list every check. `.venv/bin/pre-commit install` sets up the formatting and lint checks as Git hooks, including Biome, ShellCheck, and actionlint. `.vscode/tasks.json` has tasks for generating data, starting the tile server, running the viewer, and running the checks.
 
 The [developer pipeline notes](docs/developer-pipeline.md) describe the pipeline stages, route extraction heuristics, and the CI workflows.
 

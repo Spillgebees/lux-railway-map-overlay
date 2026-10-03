@@ -1,0 +1,13 @@
+# Rendered and linted in CI: ingress with a user-managed TLS secret.
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: tiles.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: tiles-example-com-tls
+      hosts:
+        - tiles.example.com

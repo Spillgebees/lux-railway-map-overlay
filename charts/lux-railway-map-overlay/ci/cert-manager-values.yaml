@@ -1,0 +1,10 @@
+# Rendered and linted in CI: ingress with cert-manager's default TLS block.
+publicUrl: https://tiles.example.com
+ingress:
+  enabled: true
+  className: nginx
+  certManager:
+    enabled: true
+    clusterIssuer: letsencrypt
+podDisruptionBudget:
+  enabled: true
