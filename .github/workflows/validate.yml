@@ -1,125 +1,200 @@
 name: Validate
 
-on:
-    pull_request:
-        paths:
-            - ".dockerignore"
-            - ".config/dotnet-tools.json"
-            - ".github/workflows/validate.yml"
-            - ".github/workflows/publish-image.yml"
-            - "scripts/**"
-            - "tests/**"
-            - "styles/**"
-            - "tiles/**"
-            - "viewer/**"
-    push:
-        branches: [main]
-        paths:
-            - ".dockerignore"
-            - ".config/dotnet-tools.json"
-            - ".github/workflows/validate.yml"
-            - ".github/workflows/publish-image.yml"
-            - "scripts/**"
-            - "tests/**"
-            - "styles/**"
-            - "tiles/**"
-            - "viewer/**"
+permissions: {}
 
-permissions:
-    contents: read
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-    github-actions:
-        name: GitHub Actions Validation
-        runs-on: ubuntu-latest
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # dorny/paths-filter lists PR files through the API
 
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-              with:
-                  persist-credentials: false
+    # workflow_dispatch runs every check
+    outputs:
+      workflows: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.workflows == 'true' }}
+      python: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.python == 'true' }}
+      viewer: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.viewer == 'true' }}
+      docker: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.docker == 'true' }}
 
-            - name: Lint workflow files
-              uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
-              with:
-                  args: -color
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
-    python:
-        name: Python Formatting and Tests
-        runs-on: ubuntu-latest
+      - name: Check for changes
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4
+        id: filter
+        with:
+          filters: |
+            workflows:
+              - '.github/workflows/**'
+            python:
+              - 'scripts/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - '.github/workflows/validate.yml'
+            viewer:
+              - 'viewer/**'
+              - '.config/dotnet-tools.json'
+              - '.editorconfig'
+              - '.github/workflows/validate.yml'
+            docker:
+              - '.dockerignore'
+              - 'scripts/**'
+              - 'styles/**'
+              - 'tiles/**'
+              - '.github/workflows/validate.yml'
+              - '.github/workflows/publish-image.yml'
+
+  github-actions:
+    name: GitHub Actions Validation
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Lint workflow files
+        uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+        with:
+          args: -color
+
+  python:
+    name: Python Formatting and Tests
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: scripts
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Check formatting
+        run: black --check scripts tests
+
+      - name: Run unit tests
+        run: pytest
+
+  viewer:
+    name: Viewer Build and Formatting
+    needs: changes
+    if: needs.changes.outputs.viewer == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore local .NET tools
+        run: dotnet tool restore
+
+      - name: Check C# formatting
+        run: dotnet csharpier check viewer
+
+  docker:
+    name: Dockerfile Build Validation
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: Build generator image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: ./scripts
+          file: ./scripts/Dockerfile
+          push: false
+          load: false
+
+      - name: Build tiles image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          file: ./tiles/Dockerfile
+          target: runtime
+          push: false
+          load: false
+
+  # Single required status check. Skipped jobs count as passed.
+  validate:
+    name: Validate
+    needs:
+      - changes
+      - github-actions
+      - python
+      - viewer
+      - docker
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+
+    steps:
+      - name: Check job results
         env:
-            PYTHONPATH: scripts
-
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-              with:
-                  persist-credentials: false
-
-            - name: Set up Python
-              uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-              with:
-                  python-version: "3.14"
-                  cache: pip
-
-            - name: Install validation dependencies
-              run: |
-                  python -m pip install --upgrade pip
-                  python -m pip install -e ".[dev]"
-
-            - name: Check formatting
-              run: black --check scripts tests
-
-            - name: Run unit tests
-              run: pytest
-
-    dotnet:
-        name: CSharpier Formatting Check
-        runs-on: ubuntu-latest
-
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-              with:
-                  persist-credentials: false
-
-            - name: Set up .NET
-              uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
-              with:
-                  dotnet-version: "10.0.x"
-
-            - name: Restore local .NET tools
-              run: dotnet tool restore
-
-            - name: Check C# formatting
-              run: dotnet csharpier check viewer
-
-    docker:
-        name: Dockerfile Build Validation
-        runs-on: ubuntu-latest
-
-        steps:
-            - name: Check out repository
-              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-              with:
-                  persist-credentials: false
-
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-
-            - name: Build generator image
-              uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-              with:
-                  context: ./scripts
-                  file: ./scripts/Dockerfile
-                  push: false
-                  load: false
-
-            - name: Build tiles image
-              uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-              with:
-                  context: .
-                  file: ./tiles/Dockerfile
-                  target: runtime
-                  push: false
-                  load: false
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          if [ "$FAILED" = "true" ]; then
+            echo "::error::One or more validation jobs failed or were cancelled."
+            exit 1
+          fi
+          echo "All validation jobs passed or were skipped."
