@@ -176,7 +176,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docker == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     permissions:
       contents: read
 
@@ -196,6 +196,9 @@ jobs:
           file: ./scripts/Dockerfile
           push: false
           load: false
+          # mode=max caches the tippecanoe builder stage too
+          cache-from: type=gha,scope=generator
+          cache-to: type=gha,scope=generator,mode=max
 
       - name: Build tiles image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
@@ -205,6 +208,9 @@ jobs:
           target: runtime
           push: false
           load: false
+          # mode=max caches the font-maker glyphs stage too
+          cache-from: type=gha,scope=tiles
+          cache-to: type=gha,scope=tiles,mode=max
 
   style:
     name: MapLibre Style Validation
