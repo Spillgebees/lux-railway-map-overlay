@@ -148,9 +148,9 @@
 			}
 		},
 		"publicUrl": {
-			"description": "External base URL. Empty derives it from the ingress.",
+			"description": "External base URL, http:// or https:// with an optional path and no query string or fragment. Empty derives it from the ingress.",
 			"type": "string",
-			"pattern": "^(https?://.+)?$"
+			"pattern": "^(https?://[^/?#\\s]+(/[^?#\\s]*)?)?$"
 		},
 		"env": {
 			"description": "Extra environment variables, by name.",

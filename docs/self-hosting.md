@@ -53,7 +53,7 @@ The container exits with an error if none exists.
 | `PUBLIC_URL`   | `http://localhost:3000` | External base URL. The entrypoint replaces `http://localhost:3000` in `style.json` with this value at startup. |
 | `MBTILES_PATH` | unset                   | Path to the MBTiles file. Overrides the lookup order above.                                                  |
 
-Set `PUBLIC_URL` to the URL clients use to reach the server. Otherwise `style.json` points the source, sprite, and glyph URLs at `localhost`. A trailing slash is removed.
+Set `PUBLIC_URL` to the URL clients use to reach the server. Otherwise `style.json` points the source, sprite, and glyph URLs at `localhost`. The value must start with `http://` or `https://` and may include a path, but no query string, fragment, or whitespace. The entrypoint strips trailing slashes and exits with an error if the value is invalid.
 
 With Docker Compose, pass it on the command line or put it in a `.env` file next to `docker-compose.yml`:
 
