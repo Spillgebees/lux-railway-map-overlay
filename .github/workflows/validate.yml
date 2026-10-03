@@ -120,5 +120,6 @@ jobs:
               with:
                   context: .
                   file: ./tiles/Dockerfile
+                  target: runtime
                   push: false
                   load: false

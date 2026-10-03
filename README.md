@@ -127,7 +127,7 @@ The pipeline uses a **3-pass tippecanoe strategy** to handle the different densi
 2. **Stations & routes**: point features that must always be present at their styled zoom, no dropping (`-r1`)
 3. **Detail**: dense infrastructure (signals, switches, crossings) that can be thinned at low zoom (`--drop-densest-as-needed`)
 
-The intermediate `.mbtiles` files are merged with `tile-join` into `data/out/lux-railway-map-overlay.mbtiles`. The runtime image uses the official Martin image with nginx installed in the same container. nginx listens on port 8080 and proxies Martin on `127.0.0.1:3001`.
+The intermediate `.mbtiles` files are merged with `tile-join` into `data/out/lux-railway-map-overlay.mbtiles`. The runtime image is `nginxinc/nginx-unprivileged` (Alpine) with Martin's statically linked musl release binary added. `tiles/Dockerfile` has two targets: `runtime` (MBTiles mounted at runtime, used by Docker Compose) and `bundle` (MBTiles baked in, published by CI). nginx listens on port 8080 and proxies Martin on `127.0.0.1:3001`.
 
 ## Developer Docs
 

@@ -7,6 +7,12 @@
 			"matchManagers": ["helm-values"],
 			"matchPackageNames": ["ghcr.io/spillgebees/lux-railway-map-overlay"],
 			"enabled": false
+		},
+		{
+			"description": "Keep the runtime image on nginx stable (even minor) releases.",
+			"matchDatasources": ["docker"],
+			"matchPackageNames": ["nginxinc/nginx-unprivileged"],
+			"allowedVersions": "/^\\d+\\.\\d*[02468]\\.\\d+-alpine-slim$/"
 		}
 	]
 }
