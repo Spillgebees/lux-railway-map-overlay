@@ -156,7 +156,7 @@ These tasks are intended as the default local command surface so the common work
 
 ## Viewer Dependency
 
-The demo viewer builds against the `Spillgebees.Blazor.Map` package by default (`0.16.0`). The current project file does not define an external local project-reference fallback.
+The demo viewer builds against the `Spillgebees.Blazor.Map` package by default (`0.23.0`). The current project file does not define an external local project-reference fallback.
 
 ## Local Validation
 

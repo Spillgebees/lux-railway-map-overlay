@@ -187,10 +187,15 @@ def test_viewer_dependency_docs_match_package_only_project() -> None:
 
     # act
     has_project_reference = project.getroot().find(".//ProjectReference") is not None
+    map_package = project.getroot().find(
+        ".//PackageReference[@Include='Spillgebees.Blazor.Map']"
+    )
 
     # assert
     assert not has_project_reference
-    assert "Spillgebees.Blazor.Map` package by default (`0.16.0`)" in readme
+    assert map_package is not None
+    map_version = map_package.get("Version")
+    assert f"Spillgebees.Blazor.Map` package by default (`{map_version}`)" in readme
     assert "Supported resolution order" not in readme
     assert "BLAZOR_MAP_PROJECT_PATH" not in readme
     assert "BlazorMapProjectPath" not in readme
