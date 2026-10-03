@@ -1,12 +1,23 @@
 from __future__ import annotations
 
+import http.client
+import os
 import shutil
-import urllib.error
 import urllib.parse
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from generator.pipeline_support import PipelineError
+from generator.pipeline_support import (
+    CommandRunner,
+    Downloader,
+    Logger,
+    PipelineError,
+    describe_error,
+    download_record_path,
+    is_verified_download,
+    part_path_for,
+)
 
 # Selects latest/current state from OSM history files.
 OSM_TIME_FILTER_END_DATE = "2100-01-01T00:00:00Z"
@@ -22,6 +33,13 @@ def source_download_path(sources_dir: Path, url: str) -> Path:
 
 def filtered_source_path(filtered_sources_dir: Path, country_code: str) -> Path:
     return filtered_sources_dir / f"{country_code}-railway.osm.pbf"
+
+
+def filtered_source_partial_path(output_path: Path) -> Path:
+    # keep the .osm.pbf suffix so osmium still infers the output format
+    return output_path.with_name(
+        output_path.name.removesuffix(".osm.pbf") + ".part.osm.pbf"
+    )
 
 
 def build_filter_command(input_path: Path, output_path: Path) -> list[str]:
@@ -70,11 +88,18 @@ def download_sources(
     country_urls: dict[str, str],
     country_names: dict[str, str],
     *,
-    downloader,
-    info,
-    warn,
+    downloader: Downloader,
+    info: Logger,
+    warn: Logger,
     skip_codes: frozenset[str] = frozenset(),
 ) -> None:
+    """Download country extracts that are not already cached and verified.
+
+    ``downloader`` must only create ``output_path`` once the file is complete
+    and verified (see ``pipeline_support.download_file``). A cached file is
+    reused only if ``is_verified_download`` accepts it; anything else, such as
+    a truncated file or one without a download record, is downloaded again.
+    """
     tasks = []
     for code in countries:
         if code in skip_codes:
@@ -85,9 +110,14 @@ def download_sources(
         filename = source_filename(url)
         output_path = source_download_path(sources_dir, url)
 
-        if output_path.exists() and output_path.stat().st_size > 0:
+        if is_verified_download(output_path):
             warn(f"Skipping {country_names[code]} - {filename} already exists")
             continue
+        if output_path.exists():
+            warn(
+                f"Discarding cached {filename} - incomplete or unverified, "
+                "downloading again"
+            )
 
         tasks.append((code, url, filename, output_path))
 
@@ -96,13 +126,17 @@ def download_sources(
 
     def _download_one(code, url, filename, output_path):
         output_path.unlink(missing_ok=True)
+        download_record_path(output_path).unlink(missing_ok=True)
         info(f"Downloading {country_names[code]} ({filename})...")
         try:
             downloader(url, output_path)
-        except urllib.error.URLError as error:
+        except (PipelineError, OSError, http.client.HTTPException) as error:
+            # URLError, TimeoutError and ConnectionError are OSError subclasses;
+            # IncompleteRead (dropped connection) is an HTTPException
             output_path.unlink(missing_ok=True)
+            part_path_for(output_path).unlink(missing_ok=True)
             raise PipelineError(
-                f"Failed to download {country_names[code]}: {error.reason}"
+                f"Failed to download {country_names[code]}: {describe_error(error)}"
             ) from error
         info(f"Downloaded {country_names[code]}")
 
@@ -119,11 +153,18 @@ def filter_sources(
     country_urls: dict[str, str],
     country_names: dict[str, str],
     *,
-    runner,
-    info,
-    warn,
-    size_formatter,
+    runner: CommandRunner,
+    info: Logger,
+    warn: Logger,
+    size_formatter: Callable[[int], str],
 ) -> None:
+    """Extract railway features per country.
+
+    osmium writes to a temporary file that is renamed into place only after it
+    succeeds, so an interrupted filter never leaves a partial
+    ``<code>-railway.osm.pbf`` that later runs would reuse (and that would make
+    them skip the download step).
+    """
     filtered_sources_dir.mkdir(parents=True, exist_ok=True)
 
     to_filter = []
@@ -144,8 +185,13 @@ def filter_sources(
         if not input_path.exists():
             raise PipelineError(f"Source file not found: {input_path}")
 
+        partial_path = filtered_source_partial_path(output_path)
         info(f"Filtering {country_names[code]}...")
-        runner(build_filter_command(input_path, output_path))
+        try:
+            runner(build_filter_command(input_path, partial_path))
+            os.replace(partial_path, output_path)
+        finally:
+            partial_path.unlink(missing_ok=True)
         info(
             f"Filtered {country_names[code]} -> {size_formatter(output_path.stat().st_size)}"
         )

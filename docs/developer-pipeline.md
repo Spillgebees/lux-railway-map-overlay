@@ -44,8 +44,9 @@ The GeoPackage is in EPSG:4326 and has three layers: `rail_tracks` (every line w
 
 The generator reuses earlier work:
 
-- It skips a country's download if `intermediate/sources/<code>-railway.osm.pbf` exists, or if the raw extract in `cache/sources/` exists and is not empty.
-- It always uses `cache/overpass/overpass_routes.json` when that file exists, and only queries Overpass when it does not.
+- It skips a country's download if `intermediate/sources/<code>-railway.osm.pbf` exists, or if the raw extract in `cache/sources/` matches the size recorded in its `<file>.download.json` sidecar. A raw extract without a matching sidecar (truncated, or cached before sidecars existed) is downloaded again.
+- Downloads go to a `.part` file and are renamed into place only after the size matches `Content-Length` and the MD5 matches Geofabrik's published `.md5`. Network errors, HTTP 429/5xx, and failed checks are retried up to four times with exponential backoff.
+- It uses `cache/overpass/overpass_routes.json` when that file exists and holds a valid response. A response with an Overpass `remark` (such as `runtime error: Query timed out`) is never cached. A cached file with one is discarded and the query runs again.
 
 To pick up new OpenStreetMap edits, delete the matching files:
 
@@ -98,7 +99,7 @@ flowchart TD
 
 Route extraction is the only stage that calls a live third-party API.
 
-- The generator asks Overpass for route relations inside the Luxembourg bounding box. It tries three Overpass mirrors in turn.
+- The generator asks Overpass for route relations inside the Luxembourg bounding box. It tries three Overpass mirrors in turn, twice each, with backoff between attempts. A timeout, an HTTP error, or a response with a runtime-error `remark` moves it on to the next mirror.
 - `routes.write_routes_geojson` keeps only relations whose endpoints resolve to Luxembourg station aliases.
 - `route_graph.chain_ways` turns relation members into graph records.
 - The graph search looks for the component path that best connects the resolved `from` and `to` stations.
