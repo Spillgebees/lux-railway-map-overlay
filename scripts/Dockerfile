@@ -44,6 +44,8 @@ COPY osmconf.ini /scripts/osmconf.ini
 # working directory; /tmp is world-writable so non-root users can write
 WORKDIR /tmp
 
-ENV PYTHONPATH=/scripts
+# the generator defaults --output-dir to $OUTPUT_DIR, so custom arguments
+# such as `--countries lu` still write to the mounted volume
+ENV PYTHONPATH=/scripts \
+    OUTPUT_DIR=/data
 ENTRYPOINT ["python3", "-m", "generator"]
-CMD ["--countries", "lu,be,de,fr", "--output-dir", "/data"]

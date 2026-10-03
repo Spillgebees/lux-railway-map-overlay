@@ -26,6 +26,12 @@ COUNTRY_BBOX = {
 
 SUPPORTED_COUNTRIES = tuple(GEOFABRIK_URLS.keys())
 SUPPORTED_COUNTRIES_TEXT = ", ".join(SUPPORTED_COUNTRIES)
+DEFAULT_COUNTRIES_TEXT = ",".join(SUPPORTED_COUNTRIES)
+
+# environment variable that overrides the default --output-dir; the generator
+# image sets it so the output lands on the mounted volume
+OUTPUT_DIR_ENV_VAR = "OUTPUT_DIR"
+DEFAULT_OUTPUT_DIR = "./data"
 
 
 @dataclass(frozen=True)
