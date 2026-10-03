@@ -33,8 +33,8 @@
 			"source-layer": "rail_areas",
 			"minzoom": 10,
 			"paint": {
-				"fill-color": "#f5f0e8",
-				"fill-opacity": 0.3
+				"fill-color": "#d8cfbf",
+				"fill-opacity": 0.5
 			}
 		},
 		{
@@ -49,9 +49,9 @@
 			"source-layer": "rail_areas",
 			"minzoom": 10,
 			"paint": {
-				"line-color": "#d6cebe",
+				"line-color": "#a99f8d",
 				"line-width": 1,
-				"line-opacity": 0.4
+				"line-opacity": 0.7
 			}
 		},
 		{
