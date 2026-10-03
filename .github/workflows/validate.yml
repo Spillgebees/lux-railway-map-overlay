@@ -222,6 +222,9 @@ jobs:
           target: runtime
           push: false
           load: false
+          # avoids GitHub API rate limits when the Dockerfile looks up Martin's release digest
+          secrets: |
+            github_token=${{ github.token }}
           # mode=max caches the font-maker glyphs stage too
           cache-from: type=gha,scope=tiles
           cache-to: type=gha,scope=tiles,mode=max
