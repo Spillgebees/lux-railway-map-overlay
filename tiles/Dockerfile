@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim AS glyphs
+FROM debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251 AS glyphs
 
 ARG FONT_MAKER_REF=c56771948c59a01b89d0498d47dc4abf56c25338
 
@@ -34,7 +34,7 @@ COPY tiles/glyphs/generate-glyphs.sh /glyphs/generate-glyphs.sh
 RUN chmod +x /glyphs/generate-glyphs.sh \
     && /glyphs/generate-glyphs.sh /glyphs/output /tmp/font-maker/build/font-maker
 
-FROM ghcr.io/maplibre/martin:1.11.0
+FROM ghcr.io/maplibre/martin:1.11.0@sha256:0650e9025f5fcffdc686358114679421b5e6b0ca37b374ad8a66f14709d59d2b
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
