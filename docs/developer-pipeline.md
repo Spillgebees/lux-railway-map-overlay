@@ -160,13 +160,16 @@ Local checks:
 .venv/bin/black --check scripts tests
 .venv/bin/pytest
 dotnet tool restore && dotnet csharpier check viewer
+dotnet build viewer/RailwayViewer.slnx -warnaserror
+npx --package @maplibre/maplibre-gl-style-spec gl-style-validate styles/style.json
+helm lint --strict charts/lux-railway-map-overlay
 ```
 
-`.venv/bin/pre-commit install` runs Black, CSharpier, and actionlint as Git hooks. The actionlint hook runs in Docker.
+`.venv/bin/pre-commit install` runs Black, CSharpier, Biome, ShellCheck, and actionlint as Git hooks. The actionlint hook runs in Docker.
 
 Two workflows run in GitHub Actions:
 
-- `validate.yml` runs on pull requests and on pushes to `main` that touch the generator, tests, styles, tile server, viewer, or workflows. It runs actionlint, Black, pytest, and CSharpier, and builds the generator and tile server images without pushing them. It does not download extracts or call Overpass.
+- `validate.yml` runs on every pull request and push to `main`. A `changes` job picks the checks that match the changed paths: actionlint, Black and pytest, the viewer build and CSharpier, MapLibre style validation, Biome, Helm lint and render with kubeconform, ShellCheck, Renovate config validation, and builds of the generator and tile server images (not pushed). The final `Validate` job sums up the results and is the one to require in branch protection. Nothing in it downloads extracts or calls Overpass.
 - `publish-image.yml` runs on pushes to `main` that touch the generator, styles, tile server, or Compose file, once a month on a schedule, and on manual dispatch. It generates the full dataset, fails if either route GeoJSON file is empty, builds the `bundle` target of `tiles/Dockerfile` with the MBTiles baked in, and pushes `latest` and `sha-<commit>` tags to GHCR. It caches `data/cache/overpass/` and `data/intermediate/sources/` per calendar month. A manual run with `fresh` enabled skips that cache.
 
 Together, strict route extraction and the route check in `publish-image.yml` stop a route regression from reaching a published image.
