@@ -59,6 +59,13 @@ jobs:
             python:
               - 'scripts/**'
               - 'tests/**'
+              # files the style contract tests read
+              - 'styles/**'
+              - 'docs/**'
+              - 'viewer/**'
+              - '.vscode/**'
+              - 'README.md'
+              - '.github/workflows/publish-image.yml'
               - 'pyproject.toml'
               - '.pre-commit-config.yaml'
               - '.github/workflows/validate.yml'
@@ -312,6 +319,11 @@ jobs:
             helm lint --strict "$CHART" --values "$values"
             helm template ci "$CHART" --values "$values" > "rendered/${name}.yaml"
           done
+          # kubeconform accepts an Ingress without TLS, so check the cert-manager default block explicitly
+          if ! grep -q '^  tls:$' <(helm template ci "$CHART" --values "$CHART/ci/cert-manager-values.yaml" --show-only templates/ingress.yaml); then
+            echo "::error::cert-manager scenario rendered an Ingress without spec.tls"
+            exit 1
+          fi
 
       - name: Validate rendered manifests
         uses: docker://ghcr.io/yannh/kubeconform:v0.8.0@sha256:faffaf43f95aa6425306e1ab8d6fcad72acb9049158f38e574c085ea1ec0f64e
