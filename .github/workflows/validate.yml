@@ -8,6 +8,10 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  # renovate: datasource=npm depName=@maplibre/maplibre-gl-style-spec
+  STYLE_SPEC_VERSION: 26.4.4
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -27,6 +31,8 @@ jobs:
       python: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.python == 'true' }}
       viewer: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.viewer == 'true' }}
       docker: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.docker == 'true' }}
+      style: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.style == 'true' }}
+      biome: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.biome == 'true' }}
 
     steps:
       - name: Check out repository
@@ -58,6 +64,17 @@ jobs:
               - 'tiles/**'
               - '.github/workflows/validate.yml'
               - '.github/workflows/publish-image.yml'
+            style:
+              - 'styles/**'
+              - '.github/workflows/validate.yml'
+            biome:
+              - 'biome.json'
+              - '**/*.json'
+              - '**/*.jsonc'
+              - '**/*.css'
+              - '**/*.js'
+              - '**/*.ts'
+              - '.github/workflows/validate.yml'
 
   github-actions:
     name: GitHub Actions Validation
@@ -177,6 +194,56 @@ jobs:
           push: false
           load: false
 
+  style:
+    name: MapLibre Style Validation
+    needs: changes
+    if: needs.changes.outputs.style == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      - name: Validate style.json against the MapLibre style spec
+        run: npx --yes --package "@maplibre/maplibre-gl-style-spec@${STYLE_SPEC_VERSION}" gl-style-validate styles/style.json
+
+  biome:
+    name: Biome Check
+    needs: changes
+    if: needs.changes.outputs.biome == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+
+      # Use the Biome version from the biome.json $schema URL, which Renovate keeps current.
+      - name: Run Biome
+        run: |
+          version="$(jq -r '."$schema"' biome.json | sed -E 's#^.*/schemas/([^/]+)/schema\.json$#\1#')"
+          echo "Using Biome ${version}"
+          npx --yes "@biomejs/biome@${version}" ci .
+
   # Single required status check. Skipped jobs count as passed.
   validate:
     name: Validate
@@ -186,6 +253,8 @@ jobs:
       - python
       - viewer
       - docker
+      - style
+      - biome
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
