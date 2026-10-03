@@ -122,16 +122,27 @@ MARTIN_PID=$!
 sh -c "$4" &
 NGINX_PID=$!
 echo "${MARTIN_PID} ${NGINX_PID}" >"${PIDS_FILE}"
+sleep "$5"
 supervise
 """
 
 
 def start_supervisor(
-    tmp_path: Path, martin: str, nginx: str
+    tmp_path: Path, martin: str, nginx: str, delay: float = 0
 ) -> tuple[subprocess.Popen[str], Path]:
     pids = tmp_path / "pids"
     process = subprocess.Popen(
-        ["bash", "-c", SUPERVISE, "bash", str(ENTRYPOINT), str(pids), martin, nginx],
+        [
+            "bash",
+            "-c",
+            SUPERVISE,
+            "bash",
+            str(ENTRYPOINT),
+            str(pids),
+            martin,
+            nginx,
+            str(delay),
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -168,6 +179,26 @@ def test_supervise_exits_when_either_child_exits(
     tmp_path: Path, martin: str, nginx: str, expected_status: int, expected_name: str
 ) -> None:
     process, pids = start_supervisor(tmp_path, martin, nginx)
+
+    output, _ = process.communicate(timeout=10)
+
+    assert process.returncode == expected_status, output
+    assert f"{expected_name} exited unexpectedly" in output
+    assert not any(is_running(pid) for pid in wait_for_pids(pids))
+
+
+@pytest.mark.parametrize(
+    ("martin", "nginx", "expected_status", "expected_name"),
+    [
+        ("exit 3", "exec sleep 30", 3, "Martin"),
+        ("exec sleep 30", "exit 0", 1, "nginx"),
+    ],
+)
+def test_supervise_notices_a_child_that_exited_before_supervision_started(
+    tmp_path: Path, martin: str, nginx: str, expected_status: int, expected_name: str
+) -> None:
+    # A server that crashes at startup must still stop the container.
+    process, pids = start_supervisor(tmp_path, martin, nginx, delay=0.5)
 
     output, _ = process.communicate(timeout=10)
 
