@@ -66,10 +66,6 @@ class Settings:
         return self.output_dir / "intermediate"
 
     @property
-    def shapefile_dir(self) -> Path:
-        return self.intermediate_dir / "shp"
-
-    @property
     def geojson_dir(self) -> Path:
         return self.intermediate_dir / "geojson"
 

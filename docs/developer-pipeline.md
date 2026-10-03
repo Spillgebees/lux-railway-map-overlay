@@ -11,10 +11,10 @@ To run without Docker, install Python 3.14 or newer and put these tools on your 
 | Tool                                                             | Used for                                                       |
 | ---------------------------------------------------------------- | -------------------------------------------------------------- |
 | [osmium-tool](https://osmcode.org/osmium-tool/)                  | Filtering and merging OpenStreetMap PBF extracts               |
-| [GDAL](https://gdal.org/) (`ogr2ogr`)                            | Converting PBF data to GeoJSON, shapefiles, and GeoPackage     |
+| [GDAL](https://gdal.org/) (`ogr2ogr`)                            | Converting PBF data to GeoJSON and GeoPackage                  |
 | [tippecanoe](https://github.com/felt/tippecanoe) and `tile-join` | Building and merging the MBTiles                               |
 
-The generator checks for `osmium`, `ogr2ogr`, `tippecanoe`, and `tile-join` at startup. `shapeindex` from Mapnik is optional. Without it, the generator skips the shapefile spatial indexes.
+The generator checks for `osmium`, `ogr2ogr`, `tippecanoe`, and `tile-join` at startup.
 
 ```bash
 python3 -m venv .venv
@@ -33,7 +33,7 @@ Then serve the result with `docker compose up` from the repository root.
 | Directory       | Contents                                                                                                   | Lifetime                                       |
 | --------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | `cache/`        | Raw Geofabrik extracts in `cache/sources/` and the Overpass response in `cache/overpass/overpass_routes.json` | Kept across runs to avoid repeat downloads     |
-| `intermediate/` | Filtered and merged PBFs, GeoJSON layers, shapefiles, and per-pass MBTiles                                 | Working state. Safe to delete at any time.      |
+| `intermediate/` | Filtered and merged PBFs, GeoJSON layers, and per-pass MBTiles                                             | Working state. Safe to delete at any time.     |
 | `out/`          | `lux-railway-map-overlay.mbtiles` and `railway-data.gpkg`                                                  | Final deliverables                             |
 
 The tile server and anything outside the repository should read only from `out/`. The publish workflow is the one exception. It checks route presence in `intermediate/geojson/`.
@@ -62,7 +62,6 @@ flowchart TD
     A[Geofabrik PBFs] --> B["download_sources<br/>(parallel per country)"]
     B --> C["filter_sources<br/>osmium tags-filter<br/>(parallel per country)"]
     C --> D[merge_sources]
-    D --> E["ogr2ogr<br/>shapefile export (EPSG:3857)"]
     D --> F["ogr2ogr<br/>GeoJSON export (EPSG:4326)"]
     F --> F2[property normalization]
     F2 --> G[platform reference<br/>synthesis]
@@ -90,7 +89,6 @@ flowchart TD
 
 ### Geometry exports
 
-- `convert_shapefiles` writes shapefiles to `intermediate/shp/` for consumers that need that format.
 - `convert_geojson` writes the GeoJSON layers used for tiles and route processing.
 - `normalize_geojson` adds the normalized tile schema (`mode`, `lifecycle_state`, `stop_type`, `infra_type`, and so on) in `normalization.py`.
 - `build_platform_reference_layer` builds `rail_platform_labels`, because OSM encodes platform references inconsistently.

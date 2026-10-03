@@ -61,15 +61,12 @@ def test_start_step_logs_and_returns_current_time(monkeypatch) -> None:
 
 def test_print_pipeline_summary_lists_outputs_and_layers(tmp_path, capsys) -> None:
     output_dir = tmp_path / "data"
-    shapefile_dir = output_dir / "intermediate" / "shp"
     geojson_dir = output_dir / "intermediate" / "geojson"
     deliverables_dir = output_dir / "out"
-    shapefile_dir.mkdir(parents=True)
     geojson_dir.mkdir(parents=True)
     deliverables_dir.mkdir(parents=True)
 
     (output_dir / "intermediate" / "railway-merged.osm.pbf").write_bytes(b"1234")
-    (shapefile_dir / "rail_tracks.shp").write_bytes(b"12")
     (geojson_dir / "rail_routes.geojson").write_bytes(b"123")
     (deliverables_dir / "railway-data.gpkg").write_bytes(b"12345")
 
@@ -92,7 +89,6 @@ def test_print_pipeline_summary_lists_outputs_and_layers(tmp_path, capsys) -> No
     captured = capsys.readouterr().out
     assert "Countries: Luxembourg" in captured
     assert "intermediate/railway-merged.osm.pbf" in captured
-    assert "intermediate/shp/rail_tracks.shp" in captured
     assert "intermediate/geojson/rail_routes.geojson" in captured
     assert "GeoPackage layers:" in captured
     assert "1: rail_tracks" in captured
