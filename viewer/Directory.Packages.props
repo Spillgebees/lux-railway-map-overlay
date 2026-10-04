@@ -7,6 +7,6 @@
   <ItemGroup>
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="$(AspNetCoreVersion)" />
-    <PackageVersion Include="Spillgebees.Blazor.Map" Version="0.23.0" />
+    <PackageVersion Include="Spillgebees.Blazor.Map" Version="0.24.0" />
   </ItemGroup>
 </Project>

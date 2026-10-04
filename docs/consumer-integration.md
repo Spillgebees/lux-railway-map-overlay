@@ -179,7 +179,7 @@ function toggleToken(token, visible) {
 }
 ```
 
-The demo viewer builds its toggles from these lists and the per-layer tokens when it starts ([`viewer/Overlay/StyleToggleCatalog.cs`](../viewer/Overlay/StyleToggleCatalog.cs)). It draws a layer only when every token the layer carries is switched on. Each layer carries at most one token per group, so this is the same as checking family, mode, and state separately. Spillgebees.Blazor.Map 0.23.0 can hide style layers but cannot show layers that the style hides by default, so the viewer disables those toggles ([`viewer/Overlay/OverlayVisibility.cs`](../viewer/Overlay/OverlayVisibility.cs)).
+The demo viewer builds its toggles from these lists and the per-layer tokens when it starts ([`viewer/Overlay/StyleToggleCatalog.cs`](../viewer/Overlay/StyleToggleCatalog.cs)). It draws a layer only when every token the layer carries is switched on. Each layer carries at most one token per group, so this is the same as checking family, mode, and state separately. A toggle starts on when the style draws at least one of its layers, and switching it on also shows the layers the style hides ([`viewer/Overlay/OverlayVisibility.cs`](../viewer/Overlay/OverlayVisibility.cs)). The viewer therefore starts with some layers that `style.json` hides, such as signals and switches under "Infrastructure".
 
 ## Default visibility
 

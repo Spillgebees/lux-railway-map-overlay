@@ -58,25 +58,14 @@
                 <ul class="toggle-list">
                     @foreach (var toggle in group.Toggles)
                     {
-                        var isAvailable = OverlayVisibility.IsAvailable(toggle);
-                        var hint = HintFor(toggle);
-                        var hintId = $"hint-{toggle.Token}";
                         <li>
-                            <label class="toggle" title="@TitleFor(toggle)">
+                            <label class="toggle">
                                 <Swatch Value="@toggle.Swatch" />
-                                <span class="toggle-text">
-                                    <span class="toggle-label">@toggle.Label</span>
-                                    @if (hint is not null)
-                                    {
-                                        <span id="@hintId" class="toggle-hint">@hint</span>
-                                    }
-                                </span>
+                                <span class="toggle-label">@toggle.Label</span>
                                 <input type="checkbox"
                                        role="switch"
                                        class="switch"
                                        checked="@Display.IsOn(toggle.Token)"
-                                       disabled="@(!isAvailable)"
-                                       aria-describedby="@(hint is null ? null : hintId)"
                                        data-testid="@($"toggle-{toggle.Token}")"
                                        @onchange="@(args => Display.SetOn(toggle.Token, args.Value is true))" />
                             </label>
@@ -100,43 +89,16 @@
     [Parameter]
     public string? Error { get; set; }
 
-    private IReadOnlySet<string> _unavailableTokens = new HashSet<string>();
-
-    protected override void OnParametersSet() => _unavailableTokens = OverlayVisibility.UnavailableTokens(Groups);
-
     private void TogglePanel() => _isOpen = !_isOpen;
 
     private bool AllMatch(ToggleGroup group, bool on) =>
-        group.Toggles.Where(OverlayVisibility.IsAvailable).All(toggle => Display.IsOn(toggle.Token) == on);
+        group.Toggles.All(toggle => Display.IsOn(toggle.Token) == on);
 
     private void SetGroup(ToggleGroup group, bool on)
     {
-        var tokens = group
-            .Toggles.Where(OverlayVisibility.IsAvailable)
-            .Select(toggle => toggle.Token)
-            .ToHashSet(StringComparer.Ordinal);
+        var tokens = group.Toggles.Select(toggle => toggle.Token).ToHashSet(StringComparer.Ordinal);
 
         // one Replace instead of a SetOn per toggle, so the map syncs once
         Display.Replace(Display.Items.Select(item => tokens.Contains(item.Id) ? item with { IsOn = on } : item));
-    }
-
-    private string? HintFor(LayerToggle toggle)
-    {
-        if (!OverlayVisibility.IsAvailable(toggle))
-        {
-            return "Hidden by the style";
-        }
-
-        return OverlayVisibility.IsMostlyUnreachable(toggle, _unavailableTokens)
-            ? "Some layers hidden by the style"
-            : null;
-    }
-
-    private static string? TitleFor(LayerToggle toggle)
-    {
-        var unreachable = OverlayVisibility.UnreachableLayerCount(toggle);
-        return unreachable == 0
-            ? null
-            : $"{unreachable} of {toggle.Layers.Count} style layers ship with visibility \"none\" and can't be shown here yet";
     }
 }

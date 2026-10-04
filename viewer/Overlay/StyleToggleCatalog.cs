@@ -85,9 +85,7 @@ public static class StyleToggleCatalog
             return null;
         }
 
-        var refs = matching
-            .Select(layer => new StyleLayerRef(LayerId(layer), IsVisibleByDefault(layer), LayerTokens(layer)))
-            .ToArray();
+        var refs = matching.Select(layer => new StyleLayerRef(LayerId(layer), IsVisibleByDefault(layer))).ToArray();
         return new LayerToggle(token, LabelFor(token), SwatchFor(token, matching), refs);
     }
 

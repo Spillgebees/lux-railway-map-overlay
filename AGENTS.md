@@ -48,7 +48,7 @@ The style check reads the style-spec version from `validate.yml`, so it matches 
 
 - Each overlay layer carries `metadata.toggle` tokens: a family (`tracks`, `routes`, `stops`, `platforms`, `infrastructure`, `crossings`, `areas`), plus a mode and a lifecycle state where they apply. The viewer builds its toggles from these tokens, and `tests/generator/test_style_contract.py` checks them. Add the tokens to any new layer.
 - `layout.visibility` sets the default. Tram, trackside infrastructure, and level crossings start hidden. Everything else starts visible. `docs/consumer-integration.md` lists the defaults, so update it when you change one.
-- Spillgebees.Blazor.Map 0.23 can't show a layer the style hides. The viewer greys those toggles out. When the library gains that ability, flip `CanRevealStyleHiddenLayers` in `viewer/Overlay/OverlayVisibility.cs`.
+- The viewer turns a toggle on at startup when the style draws any of its layers, and an on toggle also shows the layers the style hides. So it starts with more on screen than `style.json` alone, for example signals and switches.
 
 ### Pipeline
 
