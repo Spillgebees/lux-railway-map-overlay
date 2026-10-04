@@ -242,20 +242,8 @@ main {
 	background: var(--surface-hover);
 }
 
-.toggle:has(.switch:disabled) {
-	cursor: default;
-}
-
-.toggle:has(.switch:disabled):hover {
-	background: transparent;
-}
-
-.toggle-text {
-	display: grid;
-	min-width: 0;
-}
-
 .toggle-label {
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -263,12 +251,6 @@ main {
 
 .toggle:has(.switch:not(:checked)) .toggle-label {
 	color: var(--text-secondary);
-}
-
-.toggle-hint {
-	color: var(--text-muted);
-	font-size: 0.75rem;
-	line-height: 1.3;
 }
 
 /* switch: a native checkbox with role="switch" */
@@ -305,11 +287,6 @@ main {
 
 .switch:checked::before {
 	transform: translateX(12px);
-}
-
-.switch:disabled {
-	opacity: 0.4;
-	cursor: not-allowed;
 }
 
 /* legend swatches, drawn from the layer paint in style.json */
