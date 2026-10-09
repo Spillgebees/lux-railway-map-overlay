@@ -1,4 +1,4 @@
-FROM python:3.14-slim-trixie@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4 AS tippecanoe-builder
+FROM python:3.14-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS tippecanoe-builder
 
 # renovate: datasource=github-releases depName=felt/tippecanoe
 ARG TIPPECANOE_VERSION=2.79.0
@@ -22,7 +22,7 @@ RUN git clone --depth 1 --branch "${TIPPECANOE_VERSION}" https://github.com/felt
 # so the image installs the exact versions pinned in uv.lock.
 FROM ghcr.io/astral-sh/uv:0.12.22@sha256:f513a91fc62fe7c17567eee97230dd198e43edb8a9fbecca843714a4358fe1bc AS uv
 
-FROM python:3.14-slim-trixie@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4 AS python-deps
+FROM python:3.14-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS python-deps
 
 # Use the base image's interpreter so the venv also works in the final stage.
 ENV UV_COMPILE_BYTECODE=1 \
@@ -39,7 +39,7 @@ RUN --mount=from=uv,source=/uv,target=/usr/local/bin/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     uv sync --frozen --no-dev --no-install-project
 
-FROM python:3.14-slim-trixie@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4
+FROM python:3.14-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
 
 LABEL org.opencontainers.image.source="https://github.com/Spillgebees/lux-railway-map-overlay" \
     org.opencontainers.image.licenses="MIT" \
