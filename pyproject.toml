@@ -12,12 +12,12 @@ dev = [
     "basedpyright==1.40.2",
     "pre-commit",
     "pytest",
-    "ruff==0.16.10",
+    "ruff==0.17.2",
     "types-shapely>=2.1.0.20260728",
 ]
 
 [build-system]
-requires = ["uv_build>=0.12.22,<0.13"]
+requires = ["uv_build>=0.13.5,<0.14"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
