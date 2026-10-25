@@ -247,6 +247,8 @@ jobs:
     name: Trigger Coolify Deployment
     runs-on: ubuntu-latest
     needs: image
+    # the Coolify secrets live in this environment, which only `main` can use.
+    environment: coolify
     timeout-minutes: 5
     permissions: {}
     steps:
