@@ -1,7 +1,7 @@
 repos:
   # keep rev in step with the ruff pin in pyproject.toml's dev group
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.10
+    rev: v0.17.2
     hooks:
       - id: ruff-check
         args: [--fix]
@@ -14,7 +14,7 @@ repos:
 
   # keep rev in step with the biome.json $schema version (CI reads it from there)
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.5.15
+    rev: v2.6.2
     hooks:
       - id: biome-check
 

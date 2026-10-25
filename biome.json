@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
 	"files": {
 		"ignoreUnknown": true,
 		"includes": [
@@ -9,6 +9,7 @@
 			"!**/obj",
 			"!data",
 			"!styles/symbols",
+			"!charts/*/templates",
 			"!**/__pycache__",
 			"!**/.venv",
 			"!**/venv",
@@ -24,6 +25,11 @@
 		"formatter": {
 			"enabled": true,
 			"indentStyle": "tab"
+		}
+	},
+	"markdown": {
+		"formatter": {
+			"enabled": false
 		}
 	},
 	"css": {

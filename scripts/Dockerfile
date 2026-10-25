@@ -20,7 +20,7 @@ RUN git clone --depth 1 --branch "${TIPPECANOE_VERSION}" https://github.com/felt
 
 # Build context is the repository root (see scripts/Dockerfile.dockerignore),
 # so the image installs the exact versions pinned in uv.lock.
-FROM ghcr.io/astral-sh/uv:0.12.22@sha256:f513a91fc62fe7c17567eee97230dd198e43edb8a9fbecca843714a4358fe1bc AS uv
+FROM ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
 
 FROM python:3.14-slim-trixie@sha256:35caba83af2fe6da9a5d922f9b0156f21d1246a48278c58a08bd253303ba42e8 AS python-deps
 
