@@ -13,8 +13,6 @@ env:
   STYLE_SPEC_VERSION: 26.4.4
   # renovate: datasource=github-releases depName=helm/helm
   HELM_VERSION: v4.3.1
-  # renovate: datasource=docker depName=koalaman/shellcheck
-  SHELLCHECK_VERSION: v0.11.0
   # renovate: datasource=npm depName=renovate
   RENOVATE_VERSION: 44.178.0
   # keep in step with the ghcr.io/astral-sh/uv stage in scripts/Dockerfile
@@ -363,12 +361,15 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: List tracked shell scripts
+        id: scripts
+        run: echo "files=$(git ls-files '*.sh' | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+
       - name: Run ShellCheck on tracked shell scripts
-        run: |
-          git ls-files -z '*.sh' \
-            | xargs -0 --no-run-if-empty docker run --rm \
-              -v "$GITHUB_WORKSPACE:/mnt" -w /mnt \
-              "koalaman/shellcheck:${SHELLCHECK_VERSION}"
+        if: steps.scripts.outputs.files != ''
+        uses: docker://koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
+        with:
+          args: ${{ steps.scripts.outputs.files }}
 
   renovate:
     name: Renovate Config Validation
