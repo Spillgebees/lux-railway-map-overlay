@@ -12,11 +12,11 @@ env:
   # renovate: datasource=npm depName=@maplibre/maplibre-gl-style-spec
   STYLE_SPEC_VERSION: 26.4.4
   # renovate: datasource=github-releases depName=helm/helm
-  HELM_VERSION: v4.3.0
+  HELM_VERSION: v4.3.1
   # renovate: datasource=docker depName=koalaman/shellcheck
   SHELLCHECK_VERSION: v0.11.0
   # renovate: datasource=npm depName=renovate
-  RENOVATE_VERSION: 44.132.2
+  RENOVATE_VERSION: 44.176.3
   # keep in step with the ghcr.io/astral-sh/uv stage in scripts/Dockerfile
   # renovate: datasource=github-releases depName=astral-sh/uv
   UV_VERSION: 0.13.5
