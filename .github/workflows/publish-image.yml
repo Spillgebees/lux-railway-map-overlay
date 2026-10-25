@@ -253,7 +253,6 @@ jobs:
     permissions: {}
     steps:
       - name: Trigger Coolify deployment
-        continue-on-error: true
         env:
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
@@ -262,7 +261,7 @@ jobs:
             echo "Coolify secrets not set, skipping deployment trigger"
             exit 0
           fi
-          response=$(curl -s -w "\n%{http_code}" \
+          response=$(curl -s -X POST -w "\n%{http_code}" \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
             "$COOLIFY_WEBHOOK")
           http_code=$(echo "$response" | tail -1)
