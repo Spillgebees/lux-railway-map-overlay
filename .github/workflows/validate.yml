@@ -19,7 +19,7 @@ env:
   RENOVATE_VERSION: 44.132.2
   # keep in step with the ghcr.io/astral-sh/uv stage in scripts/Dockerfile
   # renovate: datasource=github-releases depName=astral-sh/uv
-  UV_VERSION: 0.12.22
+  UV_VERSION: 0.13.5
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
