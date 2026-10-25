@@ -38,7 +38,7 @@ RUN chmod +x /glyphs/generate-glyphs.sh \
 # this image uses (mbtiles, sprites, fonts, styles, metrics). Rendering is not
 # part of the musl build and is not used here. The download runs on the build
 # platform so cross-arch builds need no emulation.
-FROM --platform=$BUILDPLATFORM nginxinc/nginx-unprivileged:1.30.5-alpine-slim@sha256:7f79f463c6eb0d0bf8782992bb9636434398e3e5848398805aef2c9b025d8609 AS martin
+FROM --platform=$BUILDPLATFORM nginxinc/nginx-unprivileged:1.30.6-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6 AS martin
 
 ARG TARGETARCH
 # renovate: datasource=github-releases depName=maplibre/martin extractVersion=^martin-v(?<version>.*)$
@@ -77,7 +77,7 @@ RUN --mount=type=secret,id=github_token,required=false \
     && sha256sum -c martin.tar.gz.sha256 \
     && tar -xzf martin.tar.gz martin
 
-FROM nginxinc/nginx-unprivileged:1.30.5-alpine-slim@sha256:7f79f463c6eb0d0bf8782992bb9636434398e3e5848398805aef2c9b025d8609 AS base
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6 AS base
 
 USER 0
 
