@@ -70,7 +70,7 @@ The style check reads the style-spec version from `validate.yml`, so it matches 
 
 ### Code style
 
-- Python 3.14, formatted and linted by ruff, type-checked by basedpyright in standard mode.
+- Python 3.15, formatted and linted by ruff, type-checked by basedpyright in standard mode.
 - C#: .NET 10, file-scoped namespaces, `var` everywhere, Allman braces, CSharpier with a 120-column width.
 - Shell: bash with `set -euo pipefail`, clean under ShellCheck.
 - Commits use gitmoji (`:bug:`, `:sparkles:`, `:memo:`, ...).
