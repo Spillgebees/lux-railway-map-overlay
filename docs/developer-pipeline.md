@@ -21,7 +21,7 @@ uv sync
 cd scripts && uv run python -m generator --countries lu --output-dir ../data
 ```
 
-`uv sync` creates `.venv/` with Python 3.14 (uv downloads it if needed) and installs the versions pinned in `uv.lock`. Run the generator from `scripts/`. `ogr2ogr` writes temporary node cache files to the working directory.
+`uv sync` creates `.venv/` with Python 3.15 (uv downloads it if needed) and installs the versions pinned in `uv.lock`. Run the generator from `scripts/`. `ogr2ogr` writes temporary node cache files to the working directory.
 
 Then serve the result with `docker compose up` from the repository root.
 
