@@ -1,4 +1,4 @@
-FROM debian:trixie-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a AS glyphs
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS glyphs
 
 ARG FONT_MAKER_REF=c56771948c59a01b89d0498d47dc4abf56c25338
 
@@ -38,7 +38,7 @@ RUN chmod +x /glyphs/generate-glyphs.sh \
 # this image uses (mbtiles, sprites, fonts, styles, metrics). Rendering is not
 # part of the musl build and is not used here. The download runs on the build
 # platform so cross-arch builds need no emulation.
-FROM --platform=$BUILDPLATFORM nginxinc/nginx-unprivileged:1.30.5-alpine-slim@sha256:7f79f463c6eb0d0bf8782992bb9636434398e3e5848398805aef2c9b025d8609 AS martin
+FROM --platform=$BUILDPLATFORM nginxinc/nginx-unprivileged:1.30.6-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6 AS martin
 
 ARG TARGETARCH
 # renovate: datasource=github-releases depName=maplibre/martin extractVersion=^martin-v(?<version>.*)$
@@ -77,7 +77,7 @@ RUN --mount=type=secret,id=github_token,required=false \
     && sha256sum -c martin.tar.gz.sha256 \
     && tar -xzf martin.tar.gz martin
 
-FROM nginxinc/nginx-unprivileged:1.30.5-alpine-slim@sha256:7f79f463c6eb0d0bf8782992bb9636434398e3e5848398805aef2c9b025d8609 AS base
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine-slim@sha256:5d8bb9437d74a600ec5dbf90c035451c724dc33eac8d3a71078f6f8612c345f6 AS base
 
 USER 0
 
