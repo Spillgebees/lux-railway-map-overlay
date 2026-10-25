@@ -14,7 +14,7 @@ repos:
 
   # keep rev in step with the biome.json $schema version (CI reads it from there)
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.5.15
+    rev: v2.6.2
     hooks:
       - id: biome-check
 

@@ -9,6 +9,7 @@
 			"!**/obj",
 			"!data",
 			"!styles/symbols",
+			"!charts/*/templates",
 			"!**/__pycache__",
 			"!**/.venv",
 			"!**/venv",
@@ -24,6 +25,11 @@
 		"formatter": {
 			"enabled": true,
 			"indentStyle": "tab"
+		}
+	},
+	"markdown": {
+		"formatter": {
+			"enabled": false
 		}
 	},
 	"css": {
